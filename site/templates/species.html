@@ -19,7 +19,7 @@
     <nav class="crumbs">
       <a href="{{ base }}/explore/{{ sp.cls }}/">{{ sp.class_label }}</a> <span>›</span>
       <a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/">{{ order_label }}</a> <span>›</span>
-      <a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/#{{ sp.family | slug }}">{% if sp.family_common %}{{ sp.family_common }}{% else %}{{ sp.family }}{% endif %}</a>
+      <a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/#{{ sp.family | slug }}">{% set fam_key = (sp.family_common or "") | lower | replace(",", "") | replace(" and ", " ") %}{% set ord_key = order_label | lower | replace(",", "") | replace(" and ", " ") %}{% if sp.family_common and fam_key != ord_key %}{{ sp.family_common }}{% else %}{{ sp.family }}{% endif %}</a>
     </nav>
     {% if sp.has_common %}<h1>{{ sp.common }}</h1>
     <p class="sci"><em>{{ sp.sciName }}</em> <span class="auth">{{ sp.authority or "" }}</span></p>
