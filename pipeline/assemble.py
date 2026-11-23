@@ -75,7 +75,7 @@ def inat_media(row) -> dict:
     return {
         "kind": "inat", "src": tpl.format(size="large"), "thumb": tpl.format(size="medium"),
         "small": tpl.format(size="small"), "width": _clean(row.width), "height": _clean(row.height),
-        "credit": row.attribution, "license": row.license, "license_name": name, "license_url": url,
+        "credit": row.attribution, "short_credit": _short_inat_credit(row.attribution), "license": row.license, "license_name": name, "license_url": url,
         "open": bool(row.open), "page": getattr(row, "observation", None) if isinstance(getattr(row, "observation", None), str) else row.page,
         "via": "iNaturalist",
     }
@@ -133,6 +133,18 @@ def _media_for(sp: pd.DataFrame, commons, photos, allow_nc: bool) -> dict:
     return media
 
 
+def _short_inat_credit(text) -> str:
+    """'(c) Jane Doe, some rights reserved (CC BY), uploaded by Jane Doe' -> 'Jane Doe'.
+
+    The licence is shown beside the caption, so the boilerplate only crowds it.
+    The full string stays in the lightbox credit."""
+    t = str(text or "")
+    t = re.sub(r"^\(c\)\s*", "", t)
+    t = re.sub(r",?\s*(some|all|no) rights reserved.*$", "", t, flags=re.I)
+    t = re.sub(r",?\s*uploaded by .*$", "", t)
+    return t.strip() or "iNaturalist observer"
+
+
 def _ranges() -> dict:
     """Load every range table once: lookups by MDD id, sciname (GARD) and iNat taxon id."""
     out = {"mdd": {}, "gard": {}, "inat": {}, "inat_name": {}}
@@ -148,6 +160,13 @@ def _ranges() -> dict:
         out["gard"] = {r.sciname: (list(r.cells_r3), list(r.cells_r4)) for r in gard.itertuples()}
     inat = _read(DATA / "ranges" / "inat_h3.parquet")
     if inat is not None:
+        # Drop modeled ranges that fail the observation audit (check_inat_ranges.py):
+        # a wrong map is worse than none, and the page still shows observations.
+        audit = _read(DATA / "ranges" / "inat_audit.parquet")
+        if audit is not None:
+            bad = set(audit.loc[~audit["ok"], "taxon_id"].astype("int64"))
+            inat = inat[~inat["taxon_id"].astype("int64").isin(bad)]
+            print(f"  iNat ranges: dropped {len(bad)} that fail the observation audit")
         out["inat"] = {int(r.taxon_id): (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
         out["inat_name"] = {r.name: (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
     cc = _read(DATA / "ranges" / "cell_countries.parquet")

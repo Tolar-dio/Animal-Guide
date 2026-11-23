@@ -55,6 +55,35 @@ def list_files() -> list[dict]:
     return sorted(zips, key=lambda f: f["size"])
 
 
+STRIP_DEG = 60
+
+
+def strips(part):
+    """Cut a polygon into 60-degree longitude strips.
+
+    H3 treats any polygon edge longer than 180 degrees of longitude as
+    crossing the antimeridian, which turns near-global ranges inside out
+    (a house sparrow drawn over the empty Pacific). Strips keep every edge short.
+    """
+    minx, _, maxx, _ = part.bounds
+    if maxx - minx <= STRIP_DEG:
+        return [part]
+    out = []
+    x = minx
+    while x < maxx:
+        piece = part.intersection(shapely.box(x, -90, min(x + STRIP_DEG, maxx), 90))
+        out += [g for g in getattr(piece, "geoms", [piece]) if g.geom_type == "Polygon" and not g.is_empty]
+        x += STRIP_DEG
+    return out
+
+
+def part_to_cells(part, res: int, contain: str = "overlap") -> set[str]:
+    cells: set[str] = set()
+    for piece in strips(part):
+        cells.update(h3.h3shape_to_cells_experimental(h3.geo_to_h3shape(mapping(piece)), res, contain=contain))
+    return cells
+
+
 def geom_to_cells(geom, res: int) -> set[str]:
     if geom is None or geom.is_empty:
         return set()
@@ -70,8 +99,7 @@ def geom_to_cells(geom, res: int) -> set[str]:
             if part.is_empty:
                 continue
             try:
-                shape = h3.geo_to_h3shape(mapping(part))
-                cells.update(h3.h3shape_to_cells_experimental(shape, res, contain="overlap"))
+                cells.update(part_to_cells(part, res))
             except Exception as exc:  # degenerate slivers
                 c = part.representative_point()
                 cells.add(h3.latlng_to_cell(c.y, c.x, res))

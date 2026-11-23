@@ -23,7 +23,7 @@ import pyogrio
 import shapely
 from shapely.geometry import mapping
 
-from build_ranges_h3 import SMALL_R3, geom_to_cells, log
+from build_ranges_h3 import SMALL_R3, geom_to_cells, log, part_to_cells
 from common import CACHE, DATA
 
 GARD_RECORD = "https://zenodo.org/api/records/6499637"
@@ -88,7 +88,7 @@ def inat() -> None:
                 r4 = set()
                 for part in getattr(geom, "geoms", [geom]):
                     try:
-                        r4 |= set(h3.h3shape_to_cells_experimental(h3.geo_to_h3shape(mapping(part)), 4, contain="center"))
+                        r4 |= part_to_cells(part, 4, contain="center")
                     except Exception:
                         c = part.representative_point()
                         r4.add(h3.latlng_to_cell(c.y, c.x, 4))

@@ -31,6 +31,7 @@ KEEP = {
     "MaxLongevity": "longevity_yr", "SourceLongevity": "longevity_source",
     "LitterSize": "litter_size", "SourceLitterSize": "litter_source",
     "Elevation": "elevation_m", "Insularity": "insular",
+    "RangeSize_km2": "tt_range_km2", "Latitude": "tt_lat", "Longitude": "tt_lon",
 }
 
 

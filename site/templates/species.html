@@ -98,7 +98,7 @@
         {% for m in sp.media[1:] %}
         <figure>
           <a href="{{ m.src }}" class="lightbox" data-credit="{{ m.credit }} · {{ m.license_name }} · {{ m.via }}"><img src="{{ m.thumb }}" alt="{{ sp.common }}, photo {{ loop.index + 1 }}" loading="lazy"></a>
-          <figcaption><a href="{{ m.page }}">{{ m.credit | truncate(48) }}</a> · {{ m.license_name }}</figcaption>
+          <figcaption><a href="{{ m.page }}">{{ (m.short_credit or m.credit) | truncate(48) }}</a> · {{ m.license_name }}</figcaption>
         </figure>
         {% endfor %}
       </div>
