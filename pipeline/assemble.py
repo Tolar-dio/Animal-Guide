@@ -147,7 +147,7 @@ def _short_inat_credit(text) -> str:
 
 def _ranges() -> dict:
     """Load every range table once: lookups by MDD id, sciname (GARD) and iNat taxon id."""
-    out = {"mdd": {}, "gard": {}, "inat": {}, "inat_name": {}}
+    out = {"mdd": {}, "gard": {}, "inat": {}, "inat_name": {}, "inat_bad": set()}
     mdd = _read(DATA / "ranges" / "mdd_ranges_h3.parquet")
     v12 = _read(DATA / "crosswalk" / "mdd_v1_2_ids.parquet")
     if mdd is not None and v12 is not None:
@@ -166,6 +166,7 @@ def _ranges() -> dict:
         if audit is not None:
             bad = set(audit.loc[~audit["ok"], "taxon_id"].astype("int64"))
             inat = inat[~inat["taxon_id"].astype("int64").isin(bad)]
+            out["inat_bad"] = bad
             print(f"  iNat ranges: dropped {len(bad)} that fail the observation audit")
         out["inat"] = {int(r.taxon_id): (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
         out["inat_name"] = {r.name: (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
@@ -260,6 +261,7 @@ def load() -> dict:
                 cells, src = rng["inat"][d["inat_id"]], "inat"
             if cells is None and d["sciName"] in rng["inat_name"]:
                 cells, src = rng["inat_name"][d["sciName"]], "inat"
+            d["range_withheld"] = cells is None and d["inat_id"] in rng["inat_bad"]
             d["range"] = {"r3": cells[0], "r4": cells[1], "source": src, **RANGE_SOURCES[src]} if cells else None
 
             if d.get("countryDistribution"):

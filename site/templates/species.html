@@ -55,14 +55,14 @@
       <div class="map-head">
         <h2>Where it lives</h2>
         <div class="layers" role="group" aria-label="Map layers">
-          <label class="{% if not sp.range %}off{% endif %}"><input type="checkbox" id="lyr-range" {% if sp.range %}checked{% else %}disabled{% endif %}> {% if sp.range and sp.range.kind == "modeled" %}Modeled range{% else %}Expert range{% endif %}</label>
+          {% if sp.range %}<label><input type="checkbox" id="lyr-range" checked> {{ "Modeled range" if sp.range.kind == "modeled" else "Expert range" }}</label>{% endif %}
           <label class="{% if not sp.gbif_key_old %}off{% endif %}"><input type="checkbox" id="lyr-gbif" {% if sp.gbif_key_old and not sp.range %}checked{% endif %} {% if not sp.gbif_key_old %}disabled{% endif %}> Observations</label>
         </div>
       </div>
       <div id="map" class="map" data-key="{{ sp.key }}" data-kind="{{ sp.range.kind if sp.range else '' }}" data-continent="{{ sp.continents[0] if sp.continents else '' }}" data-range="{{ 1 if sp.range else 0 }}" data-gbif="{{ sp.gbif_key_old or '' }}"
            {% if sp.typeLocalityLatitude is number and sp.typeLocalityLongitude is number %}data-type-lat="{{ sp.typeLocalityLatitude }}" data-type-lng="{{ sp.typeLocalityLongitude }}"{% endif %}></div>
       <p class="map-note">
-        {% if sp.range %}<span class="key {{ 'k-model' if sp.range.kind == 'modeled' else 'k-range' }}"></span> {{ "Modeled" if sp.range.kind == "modeled" else "Expert" }} range from <a href="{{ sp.range.url }}">{{ sp.range.name }}</a> ({{ sp.range.license }}), drawn as hexagons.{% if sp.range.kind == "modeled" %} Predicted from where people have photographed it, so treat edges as approximate.{% endif %}{% else %}No range map for this species exists in open data yet.{% endif %}
+        {% if sp.range %}<span class="key {{ 'k-model' if sp.range.kind == 'modeled' else 'k-range' }}"></span> {{ "Modeled" if sp.range.kind == "modeled" else "Expert" }} range from <a href="{{ sp.range.url }}">{{ sp.range.name }}</a> ({{ sp.range.license }}), drawn as hexagons.{% if sp.range.kind == "modeled" %} Predicted from where people have photographed it, so treat edges as approximate.{% endif %}{% elif sp.range_withheld %}iNaturalist publishes a modeled range for this species, but it fails our check against where the species is actually seen (part of the range is missing from the source file), so it is hidden until a fixed version ships.{% else %}No range map for this species exists in open data yet.{% endif %}
         {% if sp.gbif_key_old %}<span class="key k-gbif"></span> Observation density from <a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a>.{% endif %}
         {% if sp.typeLocalityLatitude is number %}<span class="key k-type"></span> Type locality, where the specimen that defines the species was collected.{% endif %}
       </p>
