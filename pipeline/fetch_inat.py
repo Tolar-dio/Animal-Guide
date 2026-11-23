@@ -18,6 +18,7 @@ import json
 from datetime import date
 
 import pandas as pd
+import requests
 
 from common import CACHE, CONFIG, DATA, Http, chunks
 
@@ -50,7 +51,13 @@ def cached(http: Http, key: str, url: str, params: dict | None = None) -> dict:
     path = CACHE / "inat" / "api" / date.today().isoformat() / f"{key}.json"
     if path.exists():
         return json.loads(path.read_text())
-    data = http.json(url, params=params)
+    try:
+        data = http.json(url, params=params)
+    except requests.HTTPError as exc:  # bad ids (e.g. malformed Wikidata values) return 404/422
+        if exc.response is None or exc.response.status_code not in (404, 422):
+            raise
+        print(f"    skipping {key}: HTTP {exc.response.status_code}", flush=True)
+        data = {"results": []}
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data))
     return data

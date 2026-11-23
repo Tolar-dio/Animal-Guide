@@ -83,7 +83,7 @@ def geom_to_cells(geom, res: int) -> set[str]:
 
 
 def process_gpkg(path: Path, acc: dict) -> None:
-    with pyogrio.open_arrow(path, batch_size=8, columns=["sciname", "order"], use_pyarrow=True) as (meta, reader):
+    with pyogrio.open_arrow(path, batch_size=1, columns=["sciname", "order"], use_pyarrow=True) as (meta, reader):
         geom_col = meta["geometry_name"] or "wkb_geometry"
         for batch in reader:
             names = batch.column("sciname").to_pylist()
@@ -123,13 +123,27 @@ def main() -> None:
         key = f["key"]
         if key in done:
             continue
-        log(f"{key}: downloading {f['size'] / 1e6:.0f} MB")
         zpath = cache / key
-        subprocess.run(["curl", "-sL", "--retry", "5", "-o", str(zpath), f["links"]["self"]], check=True)
         xdir = cache / key.removesuffix(".zip")
-        with zipfile.ZipFile(zpath) as z:
-            z.extractall(xdir)
-        zpath.unlink()
+        already = xdir.exists() and any(xdir.rglob("*.gpkg")) and not zpath.exists()
+        if not already and not (zpath.exists() and zpath.stat().st_size == f["size"]):
+            log(f"{key}: downloading {f['size'] / 1e6:.0f} MB")
+            for attempt in range(10):  # large files drop mid-transfer; resume with -C -
+                r = subprocess.run(["curl", "-sL", "-C", "-", "--retry", "5", "-o", str(zpath), f["links"]["self"]])
+                if r.returncode == 0 and zpath.stat().st_size == f["size"]:
+                    break
+                log(f"  download interrupted (curl {r.returncode}), resuming")
+                time.sleep(10)
+            else:
+                raise RuntimeError(f"could not download {key}")
+        # Some order zips use Deflate64, which Python's zipfile cannot read; Info-ZIP unzip can.
+        if not already:
+            try:
+                with zipfile.ZipFile(zpath) as z:
+                    z.extractall(xdir)
+            except NotImplementedError:
+                subprocess.run(["unzip", "-o", "-q", str(zpath), "-d", str(xdir)], check=True)
+            zpath.unlink()
         for gpkg in sorted(xdir.rglob("*.gpkg")):
             log(f"  reading {gpkg.name}")
             process_gpkg(gpkg, acc)
