@@ -6,6 +6,11 @@
   const wide = window.innerWidth >= 900;
   const map = HexMap.create(el, { center: [20, 15], zoom: wide ? 1.9 : 1.0, labels: false });
   if (wide) map.setPadding({ left: Math.min(520, window.innerWidth * 0.36), top: 0, right: 0, bottom: 0 });
+  else {
+    // Phones: sit the globe below the headline and stats.
+    const intro = document.querySelector(".intro");
+    map.setPadding({ top: intro ? intro.offsetHeight + 10 : 300, left: 0, right: 0, bottom: 0 });
+  }
   let spinning = true;
   const stop = () => { spinning = false; };
   ["mousedown", "touchstart", "wheel"].forEach(ev => el.addEventListener(ev, stop, { passive: true }));

@@ -248,6 +248,10 @@ summary { cursor: pointer; color: var(--ink); font-weight: 500; }
   .brand span { display: none; }
   .surprise { padding: 8px 10px; font-size: .8rem; }
   .intro { top: 16px; right: 20px; }
+  .intro h1 { font-size: 2rem; }
+  .stats { gap: 8px 18px; margin: 12px 0; }
+  .stats strong { font-size: 1.2rem; }
+  .globe-wrap { min-height: 760px; }
   .stats { grid-template-columns: repeat(2, auto); }
   .lede { font-size: 1rem; }
   .panel { top: auto; height: 55%; }

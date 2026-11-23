@@ -132,6 +132,15 @@ text_and_facts:
     license: category labels are explicitly unrestricted
     nc: false
     status: in_use
+  - id: tetrapodtraits
+    name: TetrapodTraits (Moura et al. 2024)
+    version: 2.0.0
+    doi: 10.5281/zenodo.17200405
+    license: CC BY 4.0
+    nc: false
+    status: in_use
+    covers: body size, activity, habitat, diet, longevity, litter size; 5,158 mammals matched
+    note: Mass and longevity are maximum reported values; imputed values shown as estimates
   - id: combine
     name: COMBINE mammal traits (Soria et al. 2021)
     license: CC BY 4.0
