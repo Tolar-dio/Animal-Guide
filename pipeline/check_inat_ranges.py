@@ -26,12 +26,13 @@ GRID = "https://api.inaturalist.org/v1/grid/0/0/0.grid.json?taxon_id={}&quality_
 PASS = 0.5
 
 
+RES = 2  # res-2 cells plus one ring: about a 500 km allowance around the range
+
+
 def covered_set(cells):
     cov = set()
     for c in cells:
-        p = h3.cell_to_parent(c, 1)
-        cov.add(p)
-        cov.update(h3.grid_disk(p, 1))
+        cov.update(h3.grid_disk(h3.cell_to_parent(c, RES), 1))
     return cov
 
 
@@ -78,7 +79,7 @@ def main():
             write_json(f, pts)
         pts = [p for p in pts if -70 < p[0] < 80]
         cov = covered_set(cells[r.taxon_id])
-        hit = sum(h3.latlng_to_cell(lat, lng, 1) in cov for lat, lng in pts)
+        hit = sum(h3.latlng_to_cell(lat, lng, RES) in cov for lat, lng in pts)
         score = hit / len(pts) if pts else None
         out.append({"taxon_id": r.taxon_id, "name": r.name, "t180": r.t180, "miss": r.miss,
                     "obs_cells": len(pts), "score": score,
