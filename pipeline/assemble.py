@@ -11,7 +11,7 @@ import json
 import math
 import re
 from urllib.parse import unquote
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import pandas as pd
@@ -135,7 +135,7 @@ def _media_for(sp: pd.DataFrame, commons, photos, allow_nc: bool) -> dict:
 
 def _ranges() -> dict:
     """Load every range table once: lookups by MDD id, sciname (GARD) and iNat taxon id."""
-    out = {"mdd": {}, "gard": {}, "inat": {}}
+    out = {"mdd": {}, "gard": {}, "inat": {}, "inat_name": {}}
     mdd = _read(DATA / "ranges" / "mdd_ranges_h3.parquet")
     v12 = _read(DATA / "crosswalk" / "mdd_v1_2_ids.parquet")
     if mdd is not None and v12 is not None:
@@ -149,6 +149,7 @@ def _ranges() -> dict:
     inat = _read(DATA / "ranges" / "inat_h3.parquet")
     if inat is not None:
         out["inat"] = {int(r.taxon_id): (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
+        out["inat_name"] = {r.name: (list(r.cells_r3), list(r.cells_r4)) for r in inat.itertuples()}
     cc = _read(DATA / "ranges" / "cell_countries.parquet")
     out["countries"] = {r.cell: list(r.countries) for r in cc.itertuples()} if cc is not None else {}
     return out
@@ -238,16 +239,20 @@ def load() -> dict:
                 cells, src = rng["gard"][d["sciName"]], "gard"
             if cells is None and d["inat_id"] in rng["inat"]:
                 cells, src = rng["inat"][d["inat_id"]], "inat"
+            if cells is None and d["sciName"] in rng["inat_name"]:
+                cells, src = rng["inat_name"][d["sciName"]], "inat"
             d["range"] = {"r3": cells[0], "r4": cells[1], "source": src, **RANGE_SOURCES[src]} if cells else None
 
             if d.get("countryDistribution"):
                 d["countries"] = [c.strip() for c in d["countryDistribution"].split("|") if c.strip()]
                 d["countries_approx"] = False
             elif d["range"]:
-                found = set()
+                hits = Counter()
                 for c in d["range"]["r3"]:
-                    found.update(rng["countries"].get(c, ()))
-                d["countries"], d["countries_approx"] = sorted(found), True
+                    hits.update(rng["countries"].get(c, ()))
+                # Modeled ranges carry stray hexagons; ask for two before naming a country.
+                need = 2 if d["range"]["kind"] == "modeled" and len(d["range"]["r3"]) >= 10 else 1
+                d["countries"], d["countries_approx"] = sorted(k for k, v in hits.items() if v >= need), True
             else:
                 d["countries"], d["countries_approx"] = [], False
             d["realms"] = [c.strip() for c in (d.get("biogeographicRealm") or "").split("|") if c.strip()]

@@ -51,11 +51,24 @@ window.HexMap = {
   },
 
   bounds(cells) {
-    let w = 180, s = 90, e = -180, n = -90;
+    // Pick whichever longitude frame (-180..180 or 0..360) gives the tighter box,
+    // so ranges that cross the date line (Alaska to Siberia) still fit.
+    let s = 90, n = -90;
+    const a = [], b = [];
     for (const c of cells) {
       const [lat, lng] = h3.cellToLatLng(c);
-      w = Math.min(w, lng); e = Math.max(e, lng); s = Math.min(s, lat); n = Math.max(n, lat);
+      s = Math.min(s, lat); n = Math.max(n, lat);
+      a.push(lng); b.push(lng < 0 ? lng + 360 : lng);
     }
-    return [[w, s], [e, n]];
+    const span = v => Math.max(...v) - Math.min(...v);
+    const v = span(b) < span(a) ? b : a;
+    return [[Math.min(...v), s], [Math.max(...v), n]];
+  },
+
+  center(cells) {
+    const [[w, s], [e, n]] = this.bounds(cells);
+    let lng = (w + e) / 2;
+    if (lng > 180) lng -= 360;
+    return [lng, (s + n) / 2];
   },
 };

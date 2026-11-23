@@ -155,6 +155,20 @@ DIET = [("diet_fruit", "fruit"), ("diet_nectar", "nectar"), ("diet_seeds", "seed
         ("diet_warm_blooded", "birds and mammals"), ("diet_carrion", "carrion")]
 WAYS = [("arboreal", "in trees"), ("terrestrial", "on the ground"), ("fossorial", "in burrows"),
         ("aquatic", "in water"), ("aerial", "on the wing")]
+WAYS_BIRDS = [("arboreal", "in trees"), ("terrestrial", "on the ground"), ("aquatic", "around water"),
+              ("aerial", "in open air")]
+
+
+PROPER = ("New World", "Old World", "Australasian", "African", "American", "Asian", "Hawaiian",
+          "Madagascar", "Philippine", "Sri Lanka", "Przevalski", "Darwin")
+
+
+def family_phrase(name: str) -> str:
+    """'Hawks, Eagles, and Kites' -> 'hawks, eagles, and kites', keeping place names."""
+    out = name.lower()
+    for p in PROPER:
+        out = out.replace(p.lower(), p)
+    return out
 
 
 def activity(t: dict) -> str | None:
@@ -164,14 +178,14 @@ def activity(t: dict) -> str | None:
     return "mostly at night" if n >= 0.75 else "mostly by day" if n <= 0.25 else "by day and by night"
 
 
-def trait_phrases(t: dict) -> str | None:
+def trait_phrases(t: dict, cls: str = "mammals") -> str | None:
     """One sentence of life history, using measured values only."""
     if not t:
         return None
     out = []
     if t.get("mass_g") and measured(t, "mass_imputed"):
         out.append(f"The largest adults weigh up to {fmt_mass(t['mass_g'])}.")
-    ways = [w for k, w in WAYS if t.get(k) == 1] if measured(t, "habitat_imputed") else []
+    ways = [w for k, w in (WAYS_BIRDS if cls == "birds" else WAYS) if t.get(k) == 1] if measured(t, "habitat_imputed") else []
     act = activity(t) if measured(t, "act_imputed") else None
     if ways and act:
         out.append(f"It lives {join_words(ways)} and is active {act}.")
@@ -195,7 +209,7 @@ def glance(sp: dict, ctx: dict) -> list[str]:
     fam = sp["family"]
     order = ORDER_NAMES.get(sp["order"], sp["order"])
     order = order if order in ("Primates",) else order.lower()
-    fam_txt = f"{fam} ({sp['family_common'][0].lower() + sp['family_common'][1:]})" if sp.get("family_common") else fam
+    fam_txt = f"{fam} ({family_phrase(sp['family_common'])})" if sp.get("family_common") else fam
     s = (f"The {name} (<em>{sp['sciName']}</em>)" if sp.get("has_common", True) else f"<em>{sp['sciName']}</em>")
     s += f" belongs to the {order}, in the family {fam_txt}"
     if genus_n == 1:
@@ -215,7 +229,7 @@ def glance(sp: dict, ctx: dict) -> list[str]:
         out.append(s + ".")
 
     t = sp.get("traits") or {}
-    life = trait_phrases(t)
+    life = trait_phrases(t, sp["cls"])
     if life:
         out.append(life)
 
@@ -224,10 +238,12 @@ def glance(sp: dict, ctx: dict) -> list[str]:
         yr = sp.get("extinct_year")
         out.append(f"It is extinct{f', last recorded around {yr}' if yr else ''}. "
                    "The species is known from historical records and museum specimens.")
-    elif sp.get("countries_approx") and len(countries) == 1:
-        out.append(f"Its mapped range lies entirely within {escape(countries[0])}.")
     elif sp.get("countries_approx") and countries:
-        out.append(f"Its mapped range reaches into {len(countries)} countries.")
+        km2 = sp.get("range_km2")
+        size = f"covers roughly {fmt_area(km2)}, about the size of {area_phrase(km2)}, and " if km2 else ""
+        where = (f"lies entirely within {escape(countries[0])}" if len(countries) == 1
+                 else f"reaches into {len(countries)} countries")
+        out.append(f"Its mapped range {size}{where}.")
     elif len(countries) == 1:
         out.append(f"It is found in only one country on Earth: {escape(countries[0])}.")
     elif countries:
@@ -235,7 +251,7 @@ def glance(sp: dict, ctx: dict) -> list[str]:
         where = f"across {join_words(conts)}" if conts else ""
         out.append(f"It lives in {len(countries)} countries {where}.".replace("  ", " ").replace(" .", "."))
 
-    if sp.get("range_km2"):
+    if sp.get("range_km2") and not (sp.get("countries_approx") and countries):
         km2 = sp["range_km2"]
         out.append(f"Its mapped range covers roughly {fmt_area(km2)}, "
                    f"about the size of {area_phrase(km2)}.")

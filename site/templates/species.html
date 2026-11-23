@@ -60,11 +60,11 @@
         </div>
       </div>
       <div id="map" class="map" data-key="{{ sp.key }}" data-kind="{{ sp.range.kind if sp.range else '' }}" data-continent="{{ sp.continents[0] if sp.continents else '' }}" data-range="{{ 1 if sp.range else 0 }}" data-gbif="{{ sp.gbif_key_old or '' }}"
-           {% if sp.typeLocalityLatitude is not none and sp.typeLocalityLongitude is not none %}data-type-lat="{{ sp.typeLocalityLatitude }}" data-type-lng="{{ sp.typeLocalityLongitude }}"{% endif %}></div>
+           {% if sp.typeLocalityLatitude is number and sp.typeLocalityLongitude is number %}data-type-lat="{{ sp.typeLocalityLatitude }}" data-type-lng="{{ sp.typeLocalityLongitude }}"{% endif %}></div>
       <p class="map-note">
         {% if sp.range %}<span class="key {{ 'k-model' if sp.range.kind == 'modeled' else 'k-range' }}"></span> {{ "Modeled" if sp.range.kind == "modeled" else "Expert" }} range from <a href="{{ sp.range.url }}">{{ sp.range.name }}</a> ({{ sp.range.license }}), drawn as hexagons.{% if sp.range.kind == "modeled" %} Predicted from where people have photographed it, so treat edges as approximate.{% endif %}{% else %}No range map for this species exists in open data yet.{% endif %}
         {% if sp.gbif_key_old %}<span class="key k-gbif"></span> Observation density from <a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a>.{% endif %}
-        {% if sp.typeLocalityLatitude is not none %}<span class="key k-type"></span> Type locality, where the specimen that defines the species was collected.{% endif %}
+        {% if sp.typeLocalityLatitude is number %}<span class="key k-type"></span> Type locality, where the specimen that defines the species was collected.{% endif %}
       </p>
       {% if not sp.distributionNotes and sp.countries %}
       <div class="notes">
@@ -159,7 +159,7 @@
         {% if t.mass_g %}<dt>Weight</dt><dd>up to {{ t.mass_g | mass }}{% if t.mass_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.length_mm %}<dt>Length</dt><dd>up to {{ t.length_mm | mm }}{% if t.length_measure == "HBL" %} <span class="muted">head and body</span>{% endif %}{% if t.length_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.longevity_yr %}<dt>Lifespan</dt><dd>up to {{ t.longevity_yr | round | int }} years</dd>{% endif %}
-        {% if t.litter_size %}{% set unit = "young" if sp.cls == "mammals" else "eggs" if sp.cls == "birds" else "eggs or young" %}<dt>{{ "Litter" if sp.cls == "mammals" else "Clutch" }}</dt><dd>{% if t.litter_size < 1.15 %}usually a single {{ "young" if sp.cls == "mammals" else "egg" if sp.cls == "birds" else "egg or young" }}{% else %}about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} {{ unit }}{% endif %}</dd>{% endif %}
+        {% if t.litter_size %}{% set unit = "young" if sp.cls == "mammals" else "eggs" if sp.cls == "birds" else "eggs or young" %}<dt>{{ "Litter" if sp.cls == "mammals" else "Clutch" }}</dt><dd>{% if t.litter_size < 1.15 %}usually a single {{ "young" if sp.cls == "mammals" else "egg" if sp.cls == "birds" else "egg or young" }}{% else %}about {{ (t.litter_size | round | int) if (t.litter_size - (t.litter_size | round)) | abs < 0.05 or t.litter_size >= 10 else "%.1f" | format(t.litter_size) }} {{ unit }}{% endif %}</dd>{% endif %}
         {% if t.nocturnality is not none %}<dt>Active</dt><dd>{{ activity(t) }}{% if t.act_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
       </dl>
       {% if t %}

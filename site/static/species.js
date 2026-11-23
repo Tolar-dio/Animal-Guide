@@ -30,7 +30,8 @@
           paint: { "fill-color": color, "fill-opacity": 0.55, "fill-outline-color": "#00000000" } }, gbif ? "gbif" : undefined);
         const b = HexMap.bounds(data.cells);
         const span = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]);
-        if (span < 300) map.fitBounds(b, { padding: 50, maxZoom: data.res === 4 ? 6 : 4.5, duration: 0 });
+        if (span < 200) map.fitBounds(b, { padding: 50, maxZoom: data.res === 4 ? 6 : 4.5, duration: 0 });
+        else map.jumpTo({ center: HexMap.center(data.cells), zoom: 1.2 });
       }
       if (!isNaN(typeLat) && !isNaN(typeLng)) {
         const dot = document.createElement("div");
