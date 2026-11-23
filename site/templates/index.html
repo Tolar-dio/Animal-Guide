@@ -1,21 +1,27 @@
 {% extends "base.html" %}
-{% block title %}Animal Guide · every mammal on Earth{% endblock %}
+{% block title %}Animal Guide · every species on Earth{% endblock %}
 {% block head %}<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">{% endblock %}
 {% block bodyclass %}home{% endblock %}
 {% block main %}
 <section class="globe-wrap">
   <div id="globe" class="globe" data-ranges="{{ 1 if has_ranges else 0 }}"></div>
   <div class="intro">
-    <p class="kicker">Phase 1 · Mammals</p>
-    <h1>Every mammal on Earth.</h1>
-    <p class="lede">{{ release.species | n }} species, from the 2-gram bumblebee bat to the blue whale. {% if has_ranges %}The globe shows how many live in each hexagon. Tap one to meet them.{% else %}Range maps are still being processed; search or explore by group.{% endif %}</p>
+    <p class="kicker">Mammals · Birds · Reptiles</p>
+    <h1>Every animal on Earth.</h1>
+    <p class="lede">{{ total_species | n }} species so far, from the 2-gram bumblebee bat to the ostrich and the saltwater crocodile. The globe shows how many live in each hexagon. Tap one to meet them.</p>
     <div class="stats">
-      <div><strong>{{ release.species | n }}</strong><span>species</span></div>
-      <div><strong>{{ release.families | n }}</strong><span>families</span></div>
+      <div><strong>{{ total_species | n }}</strong><span>species</span></div>
+      <div><strong>{{ grand.range | n }}</strong><span>mapped</span></div>
       <div><strong>{{ threatened | n }}</strong><span>threatened</span></div>
-      <div><strong>{{ counts.open_photo | n }}</strong><span>with open photos</span></div>
+      <div><strong>{{ grand.open_photo | n }}</strong><span>with open photos</span></div>
     </div>
-    {% if has_ranges %}<div class="legend" id="legend"><span>Fewer species</span><i></i><span>More</span></div>{% endif %}
+    {% if has_ranges %}
+    <div class="layer-toggle" id="layer-toggle" role="group" aria-label="Show richness for">
+      <button data-cls="all" class="on">All</button>
+      {% for c in class_cards %}<button data-cls="{{ c.cls }}">{{ c.label }}</button>{% endfor %}
+    </div>
+    <div class="legend" id="legend"><span>Fewer species</span><i></i><span>More</span></div>
+    {% endif %}
   </div>
   <aside id="panel" class="panel" hidden>
     <button class="close" id="panel-close" aria-label="Close">×</button>
@@ -28,7 +34,7 @@
 
 <section class="band">
   <h2>On the edge</h2>
-  <p class="band-sub">Critically Endangered and Endangered mammals, a different handful every day.</p>
+  <p class="band-sub">Critically Endangered and Endangered animals, a different set every day.</p>
   <div class="tiles">
     {% for s in spotlight %}
     <a class="tile" href="{{ base }}/species/{{ s.slug }}/">
@@ -40,12 +46,12 @@
 </section>
 
 <section class="band">
-  <h2>Explore by group</h2>
-  <div class="orders">
-    {% for o in orders %}
-    <a class="order-card" href="{{ base }}/explore/{{ o.slug }}/">
-      {% if o.pic %}<img src="{{ o.pic.media[0].thumb }}" alt="" loading="lazy">{% endif %}
-      <span><strong>{{ o.label }}</strong><em>{{ o.order }}</em><small>{{ o.count | n }} species</small></span>
+  <h2>Explore</h2>
+  <div class="classes">
+    {% for c in class_cards %}
+    <a class="class-card" href="{{ base }}/explore/{{ c.cls }}/">
+      {% if c.pic %}<img src="{{ c.pic.media[0].thumb }}" alt="" loading="lazy">{% endif %}
+      <span class="class-text"><strong>{{ c.label }}</strong><small>{{ c.count | n }} species · {{ c.orders }} orders · {{ c.threatened | n }} threatened</small></span>
     </a>
     {% endfor %}
   </div>

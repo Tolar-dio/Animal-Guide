@@ -1,7 +1,8 @@
 name: Refresh data
 
-# Weekly: species list, crosswalk, photos, Wikipedia text. Then rebuild the site.
-# New CC BY photos posted to iNaturalist show up within a week.
+# Weekly. Species lists, crosswalk, traits and iNaturalist's monthly modeled
+# ranges first; then photos and Wikipedia text for each class in parallel
+# (each class gets its own 6-hour job); then one commit and a redeploy.
 on:
   schedule:
     - cron: "17 9 * * 0"   # Sundays 09:17 UTC (02:17 in Denver)
@@ -17,25 +18,62 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  refresh:
+  lists:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
+        with: { python-version: "3.13", cache: pip }
       - run: pip install -r requirements.txt
-      - name: Mammal Diversity Database
-        run: python pipeline/fetch_mdd.py
-      - name: Wikidata crosswalk
-        run: python pipeline/fetch_wikidata.py
-      - name: iNaturalist ids and photos
-        run: python pipeline/fetch_inat.py
-      - name: Wikimedia Commons and Wikipedia
-        run: python pipeline/fetch_wikimedia.py
+      - run: python pipeline/fetch_mdd.py
+      - run: python pipeline/fetch_birds.py
+      - run: python pipeline/fetch_reptiles.py
+      - run: python pipeline/fetch_wikidata.py
+      - run: python pipeline/fetch_traits.py
+      - name: iNaturalist modeled ranges (monthly upstream)
+        run: python pipeline/build_ranges_open.py inat
+      - uses: actions/upload-artifact@v4
+        with: { name: data-lists, path: data, retention-days: 3 }
+
+  media:
+    needs: lists
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    strategy:
+      fail-fast: false
+      matrix:
+        cls: [mammals, birds, reptiles]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.13", cache: pip }
+      - run: pip install -r requirements.txt
+      - uses: actions/download-artifact@v4
+        with: { name: data-lists, path: data }
+      - name: iNaturalist photos
+        run: python pipeline/fetch_inat.py ${{ matrix.cls }}
+      - name: Commons and Wikipedia
+        run: python pipeline/fetch_wikimedia.py ${{ matrix.cls }}
         continue-on-error: true   # keep last week's text if Wikimedia throttles us
+      - uses: actions/upload-artifact@v4
+        with:
+          name: data-media-${{ matrix.cls }}
+          retention-days: 3
+          path: |
+            data/media/${{ matrix.cls }}_*
+            data/text/${{ matrix.cls }}_*
+
+  commit:
+    needs: [lists, media]
+    if: always() && needs.lists.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: data-lists, path: data }
+      - uses: actions/download-artifact@v4
+        with: { pattern: data-media-*, path: data, merge-multiple: true }
       - name: Commit changed data
         run: |
           git config user.name "animal-guide-bot"
@@ -47,5 +85,5 @@ jobs:
           fi
 
   deploy:
-    needs: refresh
+    needs: commit
     uses: ./.github/workflows/deploy.yml

@@ -1,15 +1,19 @@
 {% extends "base.html" %}
-{% block title %}Explore mammals by group · Animal Guide{% endblock %}
+{% block title %}Explore every species · Animal Guide{% endblock %}
 {% block main %}
 <section class="page-head">
-  <h1>Explore mammals</h1>
-  <p class="lede">{{ release.species | n }} species in {{ orders | length }} orders, from Mammal Diversity Database {{ release.version }}. Ordered from the oldest branches of the mammal tree to the youngest.</p>
+  <h1>Explore</h1>
+  <p class="lede">{{ total_species | n }} species so far, in {{ class_cards | length }} classes. Amphibians and fishes are next, then every invertebrate.</p>
 </section>
-<div class="orders wide">
-  {% for o in orders %}
-  <a class="order-card" href="{{ base }}/explore/{{ o.slug }}/">
-    {% if o.pic %}<img src="{{ o.pic.media[0].thumb }}" alt="" loading="lazy">{% endif %}
-    <span><strong>{{ o.label }}</strong><em>{{ o.order }}</em><small>{{ o.count | n }} species · {{ o.families }} {{ "family" if o.families == 1 else "families" }}{% if o.threatened %} · {{ o.threatened }} threatened{% endif %}</small></span>
+<div class="classes">
+  {% for c in class_cards %}
+  <a class="class-card" href="{{ base }}/explore/{{ c.cls }}/">
+    {% if c.pic %}<img src="{{ c.pic.media[0].thumb }}" alt="" loading="lazy">{% endif %}
+    <span class="class-text">
+      <strong>{{ c.label }}</strong>
+      <small>{{ c.count | n }} species · {{ c.orders }} orders · {{ c.families }} families · {{ c.threatened | n }} threatened</small>
+      <em>{{ c.list }} {{ c.release.version }}</em>
+    </span>
   </a>
   {% endfor %}
 </div>

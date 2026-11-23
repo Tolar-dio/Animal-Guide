@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set hero = sp.media[0] if sp.media else None %}
-{% block title %}{{ sp.common }} ({{ sp.sciName }}) · Animal Guide{% endblock %}
+{% block title %}{% if sp.has_common %}{{ sp.common }} ({{ sp.sciName }}){% else %}{{ sp.sciName }}{% endif %} · Animal Guide{% endblock %}
 {% block description %}{{ sp.common }}, {{ sp.sciName }}: range map, photos, conservation status and taxonomy. {{ order_label }}, family {{ sp.family }}.{% endblock %}
 {% block head %}
 <link rel="canonical" href="{{ site_url }}/species/{{ sp.slug }}/">
@@ -17,16 +17,18 @@
   <div class="hero-shade"></div>
   <div class="hero-text">
     <nav class="crumbs">
-      <a href="{{ base }}/explore/">Mammals</a> <span>›</span>
-      <a href="{{ base }}/explore/{{ sp.order | slug }}/">{{ order_label }}</a> <span>›</span>
-      <a href="{{ base }}/explore/{{ sp.order | slug }}/#{{ sp.family | slug }}">{{ sp.family }}</a>
+      <a href="{{ base }}/explore/{{ sp.cls }}/">{{ sp.class_label }}</a> <span>›</span>
+      <a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/">{{ order_label }}</a> <span>›</span>
+      <a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/#{{ sp.family | slug }}">{% if sp.family_common %}{{ sp.family_common }}{% else %}{{ sp.family }}{% endif %}</a>
     </nav>
-    <h1>{{ sp.common }}</h1>
+    {% if sp.has_common %}<h1>{{ sp.common }}</h1>
     <p class="sci"><em>{{ sp.sciName }}</em> <span class="auth">{{ sp.authority or "" }}</span></p>
+    {% else %}<h1><em>{{ sp.sciName }}</em></h1>
+    <p class="sci"><span class="auth">{{ sp.authority or "" }}</span> <span class="muted">No widely used English name</span></p>{% endif %}
     <p class="badges">
       <span class="status s-{{ sp.iucnStatus }}" title="IUCN Red List category">{{ sp.status_name }}</span>
       {% if sp.domestic %}<span class="tag">Domestic</span>{% endif %}
-      {% if sp.countries|length == 1 and not sp.extinct %}<span class="tag">Found only in {{ sp.countries[0] }}</span>{% endif %}
+      {% if sp.countries|length == 1 and not sp.extinct and not sp.countries_approx %}<span class="tag">Found only in {{ sp.countries[0] }}</span>{% endif %}
       {% if sp.other_common %}<span class="aka">Also called {{ sp.other_common[:3] | join(", ") }}</span>{% endif %}
     </p>
   </div>
@@ -53,23 +55,30 @@
       <div class="map-head">
         <h2>Where it lives</h2>
         <div class="layers" role="group" aria-label="Map layers">
-          <label class="{% if not sp.range %}off{% endif %}"><input type="checkbox" id="lyr-range" {% if sp.range %}checked{% else %}disabled{% endif %}> Expert range</label>
+          <label class="{% if not sp.range %}off{% endif %}"><input type="checkbox" id="lyr-range" {% if sp.range %}checked{% else %}disabled{% endif %}> {% if sp.range and sp.range.kind == "modeled" %}Modeled range{% else %}Expert range{% endif %}</label>
           <label class="{% if not sp.gbif_key_old %}off{% endif %}"><input type="checkbox" id="lyr-gbif" {% if sp.gbif_key_old and not sp.range %}checked{% endif %} {% if not sp.gbif_key_old %}disabled{% endif %}> Observations</label>
         </div>
       </div>
-      <div id="map" class="map" data-id="{{ sp.id }}" data-continent="{{ sp.continents[0] if sp.continents else '' }}" data-range="{{ 1 if sp.range else 0 }}" data-gbif="{{ sp.gbif_key_old or '' }}"
+      <div id="map" class="map" data-key="{{ sp.key }}" data-kind="{{ sp.range.kind if sp.range else '' }}" data-continent="{{ sp.continents[0] if sp.continents else '' }}" data-range="{{ 1 if sp.range else 0 }}" data-gbif="{{ sp.gbif_key_old or '' }}"
            {% if sp.typeLocalityLatitude is not none and sp.typeLocalityLongitude is not none %}data-type-lat="{{ sp.typeLocalityLatitude }}" data-type-lng="{{ sp.typeLocalityLongitude }}"{% endif %}></div>
       <p class="map-note">
-        {% if sp.range %}<span class="key k-range"></span> Expert range from <a href="https://doi.org/10.5281/zenodo.6644198">Marsh et al. 2022</a> (CC BY 4.0), drawn as hexagons.{% else %}No expert range map is available for this species in open data yet.{% endif %}
+        {% if sp.range %}<span class="key {{ 'k-model' if sp.range.kind == 'modeled' else 'k-range' }}"></span> {{ "Modeled" if sp.range.kind == "modeled" else "Expert" }} range from <a href="{{ sp.range.url }}">{{ sp.range.name }}</a> ({{ sp.range.license }}), drawn as hexagons.{% if sp.range.kind == "modeled" %} Predicted from where people have photographed it, so treat edges as approximate.{% endif %}{% else %}No range map for this species exists in open data yet.{% endif %}
         {% if sp.gbif_key_old %}<span class="key k-gbif"></span> Observation density from <a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a>.{% endif %}
         {% if sp.typeLocalityLatitude is not none %}<span class="key k-type"></span> Type locality, where the specimen that defines the species was collected.{% endif %}
       </p>
+      {% if not sp.distributionNotes and sp.countries %}
+      <div class="notes">
+        <h3>Countries</h3>
+        <p class="countries"><strong>{{ sp.countries|length }} {{ "country" if sp.countries|length == 1 else "countries" }}{% if sp.countries_approx %}, from the range map{% endif %}:</strong> {{ sp.countries | join(", ") }}</p>
+        {% if sp.countries_approx %}<p class="src">Derived from the hexagons above and Natural Earth borders, so countries at the edge of the range may be missing or extra.</p>{% endif %}
+      </div>
+      {% endif %}
       {% if sp.distributionNotes %}
       <div class="notes">
         <h3>Distribution</h3>
         <p>{{ sp.distributionNotes | italic }}</p>
         {% if sp.countries %}<p class="countries"><strong>{{ sp.countries|length }} {{ "country" if sp.countries|length == 1 else "countries" }}:</strong> {{ sp.countries | join(", ") }}</p>{% endif %}
-        <p class="src">Source: Mammal Diversity Database {{ release.version }}{% if sp.dist_cites %}, citing {{ sp.dist_cites | length }} reference{{ "s" if sp.dist_cites|length != 1 }}{% endif %}.</p>
+        <p class="src">Source: Mammal Diversity Database {{ releases.mammals.version }}{% if sp.dist_cites %}, citing {{ sp.dist_cites | length }} reference{{ "s" if sp.dist_cites|length != 1 }}{% endif %}.</p>
       </div>
       {% endif %}
     </section>
@@ -99,9 +108,11 @@
     <section class="card taxo">
       <h2>Name and classification</h2>
       <dl class="cls">
-        <dt>Order</dt><dd><a href="{{ base }}/explore/{{ sp.order | slug }}/">{{ sp.order }}</a> <span class="muted">{{ order_label }}</span></dd>
+        <dt>Class</dt><dd><a href="{{ base }}/explore/{{ sp.cls }}/">{{ sp.class_label }}</a></dd>
+        <dt>Order</dt><dd><a href="{{ base }}/explore/{{ sp.cls }}/{{ sp.order | slug }}/">{{ sp.order }}</a> <span class="muted">{{ order_label }}</span></dd>
         {% if sp.suborder %}<dt>Suborder</dt><dd>{{ sp.suborder }}</dd>{% endif %}
-        <dt>Family</dt><dd>{{ sp.family }}</dd>
+        {% if sp.superfamily %}<dt>Superfamily</dt><dd>{{ sp.superfamily }}</dd>{% endif %}
+        <dt>Family</dt><dd>{{ sp.family }}{% if sp.family_common %} <span class="muted">{{ sp.family_common }}</span>{% endif %}</dd>
         {% if sp.subfamily %}<dt>Subfamily</dt><dd>{{ sp.subfamily }}</dd>{% endif %}
         {% if sp.tribe %}<dt>Tribe</dt><dd>{{ sp.tribe }}</dd>{% endif %}
         <dt>Genus</dt><dd><em>{{ sp.genus }}</em></dd>
@@ -128,7 +139,9 @@
       {% if sp.tax_cites %}
       <details><summary>References ({{ sp.tax_cites|length }})</summary><ol class="refs">{% for c in sp.tax_cites %}<li>{{ c | italic }}</li>{% endfor %}</ol></details>
       {% endif %}
-      <p class="src">Source: <a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database {{ release.version }}</a>, CC BY 4.0.</p>
+      {% if sp.cls == "mammals" %}<p class="src">Source: <a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database {{ releases.mammals.version }}</a>, CC BY 4.0.</p>
+      {% elif sp.cls == "birds" %}<p class="src">Source: <a href="https://www.birds.cornell.edu/clementschecklist/">eBird/Clements Checklist {{ releases.birds.version }}</a>, CC BY 4.0.{% if sp.traits and sp.traits.tt_authority %} Author and year from TetrapodTraits.{% endif %}</p>
+      {% else %}<p class="src">Source: <a href="https://reptile-database.reptarium.cz/species?genus={{ sp.genus }}&species={{ sp.sciName.split(' ')[1] }}">The Reptile Database {{ releases.reptiles.version }}</a> via ChecklistBank, CC BY 4.0.</p>{% endif %}
     </section>
   </article>
 
@@ -146,7 +159,7 @@
         {% if t.mass_g %}<dt>Weight</dt><dd>up to {{ t.mass_g | mass }}{% if t.mass_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.length_mm %}<dt>Length</dt><dd>up to {{ t.length_mm | mm }}{% if t.length_measure == "HBL" %} <span class="muted">head and body</span>{% endif %}{% if t.length_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.longevity_yr %}<dt>Lifespan</dt><dd>up to {{ t.longevity_yr | round | int }} years</dd>{% endif %}
-        {% if t.litter_size %}<dt>Litter</dt><dd>{% if t.litter_size < 1.15 %}usually a single young{% else %}about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} young{% endif %}</dd>{% endif %}
+        {% if t.litter_size %}{% set unit = "young" if sp.cls == "mammals" else "eggs" if sp.cls == "birds" else "eggs or young" %}<dt>{{ "Litter" if sp.cls == "mammals" else "Clutch" }}</dt><dd>{% if t.litter_size < 1.15 %}usually a single {{ "young" if sp.cls == "mammals" else "egg" if sp.cls == "birds" else "egg or young" }}{% else %}about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} {{ unit }}{% endif %}</dd>{% endif %}
         {% if t.nocturnality is not none %}<dt>Active</dt><dd>{{ activity(t) }}{% if t.act_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
       </dl>
       {% if t %}
@@ -159,12 +172,16 @@
           {% if t.litter_source %}<li>Litter: {{ t.litter_source }}</li>{% endif %}
           {% if t.diet_source %}<li>Diet: {{ t.diet_source }}</li>{% endif %}
         </ul>
-        <p><a href="https://github.com/Tolar-dio/animal-guide/issues/new?title={{ ('Data error: ' ~ sp.sciName) | urlencode }}">Spot an error? Report it</a></p>
+        <p><a href="https://github.com/Tolar-dio/Animal-Guide/issues/new?title={{ ('Data error: ' ~ sp.sciName) | urlencode }}">Spot an error? Report it</a></p>
       </details>
       {% endif %}
       <h3>Elsewhere</h3>
       <ul class="links">
-        <li><a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database</a></li>
+        {% if sp.cls == "mammals" %}<li><a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database</a></li>{% endif %}
+        {% if sp.ebird_code %}<li><a href="https://ebird.org/species/{{ sp.ebird_code }}">eBird</a></li>
+        <li><a href="https://search.macaulaylibrary.org/catalog?taxonCode={{ sp.ebird_code }}&mediaType=audio">Sounds (Macaulay)</a></li>
+        <li><a href="https://xeno-canto.org/species/{{ sp.sciName | replace(' ', '-') }}">xeno-canto</a></li>{% endif %}
+        {% if sp.cls == "reptiles" %}<li><a href="https://reptile-database.reptarium.cz/species?genus={{ sp.genus }}&species={{ sp.sciName.split(' ')[1] }}">Reptile Database</a></li>{% endif %}
         {% if sp.inat_id %}<li><a href="https://www.inaturalist.org/taxa/{{ sp.inat_id }}">iNaturalist</a></li>{% endif %}
         {% if sp.gbif_key_old %}<li><a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a></li>{% endif %}
         {% if sp.iucnStatus != "NE" %}<li><a href="https://www.iucnredlist.org/search?query={{ sp.sciName | urlencode }}&searchType=species">IUCN Red List</a></li>{% endif %}
@@ -176,14 +193,14 @@
     {% if neighbors %}
     <section class="card mini-list">
       <h2>Shares its range with</h2>
-      <ul>{% for n in neighbors %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common }}</strong><em>{{ n.sciName }}</em></span></a></li>{% endfor %}</ul>
+      <ul>{% for n in neighbors %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common if n.has_common else n.sciName }}</strong><em>{{ n.sciName if n.has_common else n.family }}</em></span></a></li>{% endfor %}</ul>
     </section>
     {% endif %}
 
     {% if relatives %}
     <section class="card mini-list">
       <h2>Others in <em>{{ sp.genus }}</em></h2>
-      <ul>{% for n in relatives %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common }}</strong><em>{{ n.sciName }}</em></span><span class="dot s-{{ n.iucnStatus }}" title="{{ n.status_name }}"></span></a></li>{% endfor %}</ul>
+      <ul>{% for n in relatives %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common if n.has_common else n.sciName }}</strong><em>{{ n.sciName if n.has_common else n.family }}</em></span><span class="dot s-{{ n.iucnStatus }}" title="{{ n.status_name }}"></span></a></li>{% endfor %}</ul>
       {% if relatives_total > relatives|length %}<p class="more"><a href="{{ base }}/explore/{{ sp.order | slug }}/#{{ sp.family | slug }}">All {{ relatives_total + 1 }} species</a></p>{% endif %}
     </section>
     {% endif %}

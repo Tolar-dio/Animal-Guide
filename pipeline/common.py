@@ -18,7 +18,7 @@ CONFIG = yaml.safe_load((ROOT / "config.yaml").read_text())
 
 def slugify(sci_name: str) -> str:
     """'Puma concolor' or 'Puma_concolor' -> 'puma-concolor'."""
-    s = unicodedata.normalize("NFKD", sci_name).encode("ascii", "ignore").decode()
+    s = unicodedata.normalize("NFKD", sci_name or "unknown").encode("ascii", "ignore").decode()
     s = re.sub(r"[^A-Za-z0-9]+", "-", s).strip("-").lower()
     return s
 

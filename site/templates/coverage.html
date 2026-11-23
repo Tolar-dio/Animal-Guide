@@ -4,40 +4,50 @@
 {% block main %}
 <section class="page-head">
   <h1>What we have, and what's missing</h1>
-  <p class="lede">An honest count of how much open evidence exists for each mammal. Every gap below is a species that nobody has yet photographed, mapped or written about under an open license.</p>
+  <p class="lede">An honest count of how much open evidence exists for each species. Every gap below is an animal nobody has yet photographed, mapped or written about under an open license.</p>
+  <nav class="jump">{% for c in cov_classes %}<a href="#{{ c.cls }}">{{ c.label }} <small>{{ c.count | n }}</small></a>{% endfor %}<a href="#most-wanted">Most wanted</a></nav>
 </section>
 <section class="cov-summary">
-  <div><strong>{{ pct(totals.open_photo, totals.count) }}</strong><span>have an openly licensed photo ({{ totals.open_photo | n }})</span></div>
-  <div><strong>{{ pct(totals.nc_photo, totals.count) }}</strong><span>have only a non-commercial photo ({{ totals.nc_photo | n }})</span></div>
-  <div><strong>{{ pct(totals.no_photo, totals.count) }}</strong><span>have no usable photo at all ({{ totals.no_photo | n }})</span></div>
-  <div><strong>{{ pct(totals.range, totals.count) }}</strong><span>have an expert range map ({{ totals.range | n }})</span></div>
-  <div><strong>{{ pct(totals.wiki, totals.count) }}</strong><span>have a Wikipedia article ({{ totals.wiki | n }})</span></div>
+  <div><strong>{{ pct(grand.open_photo, grand.count) }}</strong><span>have an openly licensed photo ({{ grand.open_photo | n }} of {{ grand.count | n }})</span></div>
+  <div><strong>{{ pct(grand.no_photo, grand.count) }}</strong><span>have no usable photo at all ({{ grand.no_photo | n }})</span></div>
+  <div><strong>{{ pct(grand.range, grand.count) }}</strong><span>have a range map ({{ grand.range | n }}; {{ grand.expert | n }} expert-drawn)</span></div>
+  <div><strong>{{ pct(grand.wiki, grand.count) }}</strong><span>have Wikipedia text ({{ grand.wiki | n }})</span></div>
 </section>
-<div class="table-wrap">
-<table class="cov">
-  <thead><tr><th>Group</th><th>Species</th><th>Open photo</th><th>NC only</th><th>No photo</th><th>Range map</th><th>Wikipedia</th></tr></thead>
-  <tbody>
-  {% for r in rows %}
-  <tr>
-    <td><a href="{{ base }}/explore/{{ r.slug }}/">{{ r.label }}</a> <span class="muted">{{ r.order }}</span></td>
-    <td>{{ r.count | n }}</td>
-    <td><span class="bar"><i style="width:{{ pct(r.open_photo, r.count) }}"></i></span>{{ pct(r.open_photo, r.count) }}</td>
-    <td>{{ r.nc_photo | n }}</td>
-    <td>{{ r.no_photo | n }}</td>
-    <td><span class="bar"><i style="width:{{ pct(r.range, r.count) }}"></i></span>{{ pct(r.range, r.count) }}</td>
-    <td><span class="bar"><i style="width:{{ pct(r.wiki, r.count) }}"></i></span>{{ pct(r.wiki, r.count) }}</td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-</div>
+{% for c in cov_classes %}
+<section class="cov-class" id="{{ c.cls }}">
+  <h2>{{ c.label }} <small>{{ c.count | n }} species</small></h2>
+  <div class="table-wrap">
+  <table class="cov">
+    <thead><tr><th>Group</th><th>Species</th><th>Open photo</th><th>NC only</th><th>No photo</th><th>Range map</th><th>Expert map</th><th>Wikipedia</th></tr></thead>
+    <tbody>
+    {% for r in c.rows %}
+    <tr>
+      <td><a href="{{ base }}/explore/{{ r.cls }}/{{ r.slug }}/">{{ r.label }}</a> <span class="muted">{{ r.order }}</span></td>
+      <td>{{ r.count | n }}</td>
+      <td><span class="bar"><i style="width:{{ pct(r.open_photo, r.count) }}"></i></span>{{ pct(r.open_photo, r.count) }}</td>
+      <td>{{ r.nc_photo | n }}</td>
+      <td>{{ r.no_photo | n }}</td>
+      <td><span class="bar"><i style="width:{{ pct(r.range, r.count) }}"></i></span>{{ pct(r.range, r.count) }}</td>
+      <td>{{ pct(r.expert, r.count) }}</td>
+      <td><span class="bar"><i style="width:{{ pct(r.wiki, r.count) }}"></i></span>{{ pct(r.wiki, r.count) }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="total"><td>All {{ c.label | lower }}</td><td>{{ c.totals.count | n }}</td><td>{{ pct(c.totals.open_photo, c.totals.count) }}</td><td>{{ c.totals.nc_photo | n }}</td><td>{{ c.totals.no_photo | n }}</td><td>{{ pct(c.totals.range, c.totals.count) }}</td><td>{{ pct(c.totals.expert, c.totals.count) }}</td><td>{{ pct(c.totals.wiki, c.totals.count) }}</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endfor %}
 <section class="wanted" id="most-wanted">
-  <h2>Most wanted: {{ wanted_n | n }} living mammals with no open photo</h2>
-  <p>If you have a photo of any of these, or can take one, post it to <a href="https://www.inaturalist.org/">iNaturalist</a> with a CC BY or CC0 license. The next nightly build will pick it up.</p>
-  {% for order, members in wanted.items() %}
-  <details{% if loop.first %} open{% endif %}><summary>{{ order_names.get(order, order) }} <small>{{ members|length }}</small></summary>
-    <ul class="wanted-list">{% for s in members %}<li><a href="{{ base }}/species/{{ s.slug }}/"><em>{{ s.sciName }}</em></a> {{ s.common }} <span class="muted">{{ s.family }}{% if s.countries %} · {{ s.countries[:3] | join(", ") }}{% if s.countries|length > 3 %}…{% endif %}{% endif %}</span></li>{% endfor %}</ul>
+  <h2>Most wanted</h2>
+  <p>Living species with no open photo anywhere. If you have a photo of any of these, or can take one, post it to <a href="https://www.inaturalist.org/">iNaturalist</a> with a CC BY or CC0 license. The weekly refresh will pick it up.</p>
+  {% for c in cov_classes %}
+  <h3>{{ c.label }}: {{ c.wanted_n | n }}</h3>
+  {% for order, members in c.wanted.items() %}
+  <details><summary>{{ order_names.get(order, order) }} <small>{{ members|length }}</small></summary>
+    <ul class="wanted-list">{% for s in members %}<li><a href="{{ base }}/species/{{ s.slug }}/"><em>{{ s.sciName }}</em></a>{% if s.has_common %} {{ s.common }}{% endif %} <span class="muted">{{ s.family }}{% if s.countries %} · {{ s.countries[:3] | join(", ") }}{% if s.countries|length > 3 %}…{% endif %}{% endif %}</span></li>{% endfor %}</ul>
   </details>
+  {% endfor %}
   {% endfor %}
 </section>
 {% endblock %}

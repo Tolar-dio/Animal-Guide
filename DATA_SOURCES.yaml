@@ -13,6 +13,14 @@ species_lists:
     nc: false
     status: in_use
     covers: 6,904 mammal species (6,774 wild extant, 113 recently extinct, 17 domestic)
+  - id: clements
+    name: eBird/Clements Checklist of Birds of the World
+    version: v2026
+    url: https://www.birds.cornell.edu/clementschecklist/
+    license: CC BY 4.0
+    nc: false
+    status: in_use
+    covers: 11,201 bird species, via the eBird taxonomy API (species codes link to eBird and Macaulay)
   - id: avilist
     name: AviList global bird checklist
     version: v2026 (2026-10-20)
@@ -21,6 +29,15 @@ species_lists:
     nc: false
     status: planned
     covers: 11,172 bird species
+    note: Site blocks automated downloads (HTTP 403); 97.7% aligned with Clements
+  - id: reptile_database
+    name: The Reptile Database (via ChecklistBank dataset 1008)
+    version: 2026-06
+    url: http://www.reptile-database.org/
+    license: CC BY 4.0
+    nc: false
+    status: in_use
+    covers: 12,650 reptile species
   - id: col_xr
     name: Catalogue of Life eXtended Release
     version: 2026-10
@@ -59,17 +76,27 @@ ranges:
     status: in_use
     note: Live tiles, nothing rehosted
   - id: inat_ranges
-    name: iNaturalist Open Range Map Dataset
+    name: iNaturalist Open Range Map Dataset (Geomodel)
     url: https://www.inaturalist.org/pages/range_maps
     license: CC BY 4.0
     nc: false
-    status: planned
+    status: in_use
+    covers: modeled ranges for about 7,000 birds, 3,300 reptiles and 1,700 mammals; refreshed monthly upstream
   - id: gard
     name: Global Assessment of Reptile Distributions 1.7
-    url: https://datadryad.org/
+    doi: 10.5281/zenodo.6499637
+    url: https://doi.org/10.5281/zenodo.6499637
     license: CC0
     nc: false
-    status: planned
+    status: in_use
+    covers: expert ranges for 10,914 terrestrial reptiles
+  - id: natural_earth
+    name: Natural Earth admin-0 countries 1:50m
+    url: https://www.naturalearthdata.com/
+    license: Public domain
+    nc: false
+    status: in_use
+    note: Tags range hexagons with countries for birds and reptiles
   - id: iucn_spatial
     name: IUCN Red List spatial data
     url: https://www.iucnredlist.org/terms/terms-of-use
@@ -105,6 +132,7 @@ media:
     license: per recording, mostly CC BY-NC-SA / BY-NC-ND
     nc: true
     status: planned
+    note: API v3 needs a free key (XC_API_KEY secret); bird pages link out until then
   - id: bhl
     name: Biodiversity Heritage Library plates (pre-1931, US public domain)
     url: https://www.biodiversitylibrary.org/
@@ -139,7 +167,7 @@ text_and_facts:
     license: CC BY 4.0
     nc: false
     status: in_use
-    covers: body size, activity, habitat, diet, longevity, litter size; 5,158 mammals matched
+    covers: body size, activity, habitat, diet, longevity, litter or clutch size; 5,158 mammals, 7,724 birds, 9,051 reptiles matched
     note: Mass and longevity are maximum reported values; imputed values shown as estimates
   - id: combine
     name: COMBINE mammal traits (Soria et al. 2021)

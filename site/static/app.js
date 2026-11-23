@@ -3,18 +3,16 @@
   const base = document.body.dataset.base || "";
   let indexPromise = null;
 
-  // Index rows: [slug, sci, common, other names, order, status, thumb, id]
+  // Index rows: [slug, sci, common ("" if none), other names, order, status, thumb, n, class code]
   window.AG = {
     base,
     index() {
       if (!indexPromise) {
         indexPromise = fetch(base + "/data/search.json").then(r => r.json()).then(rows => {
-          const byId = new Map();
           rows.forEach(r => {
             r.hay = (r[2] + " | " + r[1] + " | " + r[3]).toLowerCase();
-            byId.set(r[7], r);
           });
-          return { rows, byId };
+          return { rows };
         });
       }
       return indexPromise;
@@ -29,8 +27,8 @@
 
   function score(r, term) {
     const common = r[2].toLowerCase(), sci = r[1].toLowerCase();
-    if (common === term || sci === term) return 0;
-    if (common.startsWith(term) || sci.startsWith(term)) return 1;
+    if ((common && common === term) || sci === term) return 0;
+    if ((common && common.startsWith(term)) || sci.startsWith(term)) return 1;
     if (r.hay.includes(" " + term) || r.hay.includes("|" + term)) return 2;
     if (r.hay.includes(term)) return 3;
     return 9;
@@ -45,11 +43,11 @@
       const s = score(r, term);
       if (s < 9) hits.push([s, r]);
     }
-    hits.sort((a, b) => a[0] - b[0] || a[1][2].localeCompare(b[1][2]));
+    hits.sort((a, b) => a[0] - b[0] || (a[1][2] || a[1][1]).localeCompare(b[1][2] || b[1][1]));
     active = -1;
     box.innerHTML = hits.slice(0, 12).map(([, r]) =>
       `<a href="${AG.url(r[0])}">${r[6] ? `<img src="${r[6]}" alt="" loading="lazy">` : '<span class="ph"></span>'}
-       <span><strong>${AG.esc(r[2])}</strong><em>${AG.esc(r[1])}</em></span></a>`).join("") ||
+       <span>${r[2] ? `<strong>${AG.esc(r[2])}</strong><em>${AG.esc(r[1])}</em>` : `<strong><em>${AG.esc(r[1])}</em></strong>`}<em class="cls">${{ m: "Mammal", b: "Bird", r: "Reptile" }[r[8]] || ""}</em></span></a>`).join("") ||
       `<a><span><strong>No matches</strong><em>Try a scientific name or a genus</em></span></a>`;
     box.hidden = false;
   }

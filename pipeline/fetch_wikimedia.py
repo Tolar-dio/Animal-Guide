@@ -8,13 +8,16 @@ Wikipedia: plain-text lead section (exintro) for each English article,
 20 per call. Stored verbatim with revision id so the site can attribute it
 as CC BY-SA 4.0 and link to the exact version used.
 
-Writes data/media/commons_images.parquet and data/text/wikipedia_leads.parquet.
+Writes data/media/<class>_commons_images.parquet and data/text/<class>_wikipedia_leads.parquet.
+  python fetch_wikimedia.py mammals|birds|reptiles   (default: all three)
 """
 from __future__ import annotations
 
+import hashlib
 import html
 import json
 import re
+import sys
 
 import pandas as pd
 
@@ -46,8 +49,9 @@ def norm_license(short: str | None, url: str | None) -> str | None:
 
 
 def cached_query(http: Http, url: str, kind: str, i: int, params: dict) -> dict:
-    """One API call, cached on disk so a throttled run resumes where it stopped."""
-    path = CACHE / "wikimedia" / kind / f"{i:05d}.json"
+    """One API call, cached on disk (keyed by its titles) so a throttled run resumes."""
+    digest = hashlib.sha1(params["titles"].encode()).hexdigest()[:16]
+    path = CACHE / "wikimedia" / kind / f"{digest}.json"
     if path.exists():
         return json.loads(path.read_text())
     r = http.json(url, params=params)
@@ -112,23 +116,23 @@ def leads(http: Http, titles: list[str]) -> list[dict]:
 
 
 def main() -> None:
-    xw = pd.read_parquet(DATA / "crosswalk" / "mammals_wikidata.parquet")
-
+    classes = sys.argv[1:] or ["mammals", "birds", "reptiles"]
     http_c = Http(min_interval=CONFIG["rate"]["commons"])
-    files = sorted(xw["commons_image"].dropna().unique())
-    imgs = pd.DataFrame(commons(http_c, files))
-    imgs = imgs[imgs["file"].str.lower().str.endswith((".jpg", ".jpeg", ".png", ".webp"))]
-    (DATA / "media").mkdir(parents=True, exist_ok=True)
-    imgs.to_parquet(DATA / "media" / "commons_images.parquet", index=False)
-    print(f"Commons: {len(files)} files, {imgs['license'].notna().sum()} with an open license")
-
     http_w = Http(min_interval=CONFIG["rate"]["wikipedia"])
-    titles = sorted(xw["enwiki"].dropna().unique())
-    ld = pd.DataFrame(leads(http_w, titles))
-    (DATA / "text").mkdir(parents=True, exist_ok=True)
-    ld.to_parquet(DATA / "text" / "wikipedia_leads.parquet", index=False)
-    print(f"Wikipedia: {len(ld)} lead sections from {len(titles)} titles; "
-          f"median {int(ld['lead'].str.len().median())} characters")
+    for cls in classes:
+        xw = pd.read_parquet(DATA / "crosswalk" / f"{cls}_wikidata.parquet")
+        files = sorted(xw["commons_image"].dropna().unique())
+        imgs = pd.DataFrame(commons(http_c, files))
+        imgs = imgs[imgs["file"].str.lower().str.endswith((".jpg", ".jpeg", ".png", ".webp"))]
+        (DATA / "media").mkdir(parents=True, exist_ok=True)
+        imgs.to_parquet(DATA / "media" / f"{cls}_commons_images.parquet", index=False)
+        print(f"Commons {cls}: {len(files)} files, {imgs['license'].notna().sum()} with an open license", flush=True)
+
+        titles = sorted(xw["enwiki"].dropna().unique())
+        ld = pd.DataFrame(leads(http_w, titles))
+        (DATA / "text").mkdir(parents=True, exist_ok=True)
+        ld.to_parquet(DATA / "text" / f"{cls}_wikipedia_leads.parquet", index=False)
+        print(f"Wikipedia {cls}: {len(ld)} lead sections from {len(titles)} titles", flush=True)
 
 
 if __name__ == "__main__":

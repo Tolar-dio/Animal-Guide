@@ -3,7 +3,8 @@
   const el = document.getElementById("map");
   if (el && window.maplibregl) {
     const base = AG.base;
-    const id = el.dataset.id;
+    const key = el.dataset.key;
+    const modeled = el.dataset.kind === "modeled";
     const gbif = el.dataset.gbif;
     const hasRange = el.dataset.range === "1";
     const typeLat = parseFloat(el.dataset.typeLat), typeLng = parseFloat(el.dataset.typeLng);
@@ -22,11 +23,11 @@
           layout: { visibility: document.getElementById("lyr-gbif").checked ? "visible" : "none" } });
       }
       if (hasRange) {
-        const data = await fetch(`${base}/data/range/${id}.json`).then(r => r.json());
-        map.addSource("range", { type: "geojson", data: HexMap.cellsToGeoJSON(data.cells),
-          attribution: 'Range: <a href="https://doi.org/10.5281/zenodo.6644198">Marsh et al. 2022</a>' });
+        const data = await fetch(`${base}/data/range/${key}.json`).then(r => r.json());
+        map.addSource("range", { type: "geojson", data: HexMap.cellsToGeoJSON(data.cells) });
+        const color = modeled ? "#5fc4b8" : "#e3a857";
         map.addLayer({ id: "range", type: "fill", source: "range",
-          paint: { "fill-color": "#e3a857", "fill-opacity": 0.55, "fill-outline-color": "#e3a85700" } }, gbif ? "gbif" : undefined);
+          paint: { "fill-color": color, "fill-opacity": 0.55, "fill-outline-color": "#00000000" } }, gbif ? "gbif" : undefined);
         const b = HexMap.bounds(data.cells);
         const span = Math.max(b[1][0] - b[0][0], b[1][1] - b[0][1]);
         if (span < 300) map.fitBounds(b, { padding: 50, maxZoom: data.res === 4 ? 6 : 4.5, duration: 0 });

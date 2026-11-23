@@ -1,35 +1,45 @@
-"""Build the identifier crosswalk for mammals from Wikidata (CC0).
+"""Build the identifier crosswalk from Wikidata (CC0) for one class.
 
-Matches MDD species to Wikidata by the "ASM Mammal Diversity Database ID"
-property (P12560), then by exact scientific name (P225) for the rest.
+  python fetch_wikidata.py mammals|birds|reptiles   (default: all three)
 
-Writes data/crosswalk/mammals_wikidata.parquet with one row per MDD id:
+Matching order:
+  mammals   "ASM Mammal Diversity Database ID" (P12560), then exact name (P225)
+  birds     "eBird taxon ID" (P3444), then exact name
+  reptiles  exact name
+
+Writes data/crosswalk/<class>_wikidata.parquet keyed by `key`:
   qid, inat_id (P3151), gbif_key_old (P846), gbif_key (P14607), iucn_id (P627),
-  commons_image (P18), enwiki (English Wikipedia title), match ("mdd_id"|"name")
+  iucn_status (P141, as a two-letter code), commons_image (P18), enwiki, match
 """
 from __future__ import annotations
+
+import sys
+from urllib.parse import unquote
 
 import pandas as pd
 
 from common import CONFIG, DATA, Http, chunks
 
 SPARQL = "https://query.wikidata.org/sparql"
+STATUS = {"Q211005": "LC", "Q719675": "NT", "Q278113": "VU", "Q11394": "EN", "Q219127": "CR",
+          "Q239509": "EW", "Q237350": "EX", "Q3245245": "DD"}
 
 FIELDS = """
   OPTIONAL { ?item wdt:P3151 ?inat. }
   OPTIONAL { ?item wdt:P846 ?gbifOld. }
   OPTIONAL { ?item wdt:P14607 ?gbif. }
   OPTIONAL { ?item wdt:P627 ?iucn. }
+  OPTIONAL { ?item wdt:P141 ?status. }
   OPTIONAL { ?item wdt:P18 ?image. }
   OPTIONAL { ?wp schema:about ?item; schema:isPartOf <https://en.wikipedia.org/>; schema:name ?enwiki. }
 """
 AGG = """(SAMPLE(?inat) AS ?inat) (SAMPLE(?gbifOld) AS ?gbifOld) (SAMPLE(?gbif) AS ?gbif)
- (SAMPLE(?iucn) AS ?iucn) (SAMPLE(?image) AS ?image) (SAMPLE(?enwiki) AS ?enwiki)"""
+ (SAMPLE(?iucn) AS ?iucn) (SAMPLE(?status) AS ?status) (SAMPLE(?image) AS ?image) (SAMPLE(?enwiki) AS ?enwiki)"""
 
-BY_ID = f"""SELECT ?item ?mdd {AGG} WHERE {{
-  ?item wdt:P12560 ?mdd.
-  {FIELDS}
-}} GROUP BY ?item ?mdd"""
+BY_PROP = """SELECT ?item ?ext {agg} WHERE {{
+  ?item wdt:{prop} ?ext.
+  {fields}
+}} GROUP BY ?item ?ext"""
 
 BY_NAME = """SELECT ?item ?name {agg} WHERE {{
   VALUES ?name {{ {values} }}
@@ -37,72 +47,81 @@ BY_NAME = """SELECT ?item ?name {agg} WHERE {{
   {fields}
 }} GROUP BY ?item ?name"""
 
+# class -> (species file, column holding the external id, Wikidata property)
+CLASSES = {
+    "mammals": ("mammals.parquet", "id", "P12560"),
+    "birds": ("birds.parquet", "ebird_code", "P3444"),
+    "reptiles": ("reptiles.parquet", None, None),
+}
+SCORE_COLS = ["inat_id", "gbif_key_old", "iucn_id", "image", "enwiki"]
+
 
 def run(http: Http, query: str) -> list[dict]:
-    r = http.get(SPARQL, params={"query": query, "format": "json"}, timeout=180)
-    rows = []
-    for b in r.json()["results"]["bindings"]:
-        rows.append({k: v["value"] for k, v in b.items()})
-    return rows
+    r = http.get(SPARQL, params={"query": query, "format": "json"}, timeout=300)
+    return [{k: v["value"] for k, v in b.items()} for b in r.json()["results"]["bindings"]]
 
 
 def tidy(rows: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(rows)
-    for col in ("inat", "gbifOld", "gbif", "iucn", "image", "enwiki"):
+    for col in ("inat", "gbifOld", "gbif", "iucn", "status", "image", "enwiki"):
         if col not in df:
             df[col] = None
     df["qid"] = df["item"].str.rsplit("/", n=1).str[-1]
-    df["commons_image"] = df["image"].str.replace(
-        "http://commons.wikimedia.org/wiki/Special:FilePath/", "", regex=False)
-    df["commons_image"] = df["commons_image"].map(
-        lambda s: requests_unquote(s) if isinstance(s, str) else None)
-    return df.rename(columns={"inat": "inat_id", "gbifOld": "gbif_key_old", "gbif": "gbif_key",
-                              "iucn": "iucn_id"})
+    df["commons_image"] = df["image"].map(
+        lambda s: unquote(s.replace("http://commons.wikimedia.org/wiki/Special:FilePath/", ""))
+        if isinstance(s, str) else None)
+    df["iucn_status"] = df["status"].map(
+        lambda s: STATUS.get(s.rsplit("/", 1)[-1]) if isinstance(s, str) else None)
+    df = df.rename(columns={"inat": "inat_id", "gbifOld": "gbif_key_old", "gbif": "gbif_key", "iucn": "iucn_id"})
+    df["score"] = df[SCORE_COLS].notna().sum(axis=1)
+    return df
 
 
-def requests_unquote(s: str) -> str:
-    from urllib.parse import unquote
-    return unquote(s)
+def crosswalk(cls: str, http: Http) -> None:
+    fname, ext_col, prop = CLASSES[cls]
+    sp = pd.read_parquet(DATA / "species" / fname)
+    if "key" not in sp:
+        sp["key"] = "m" + sp["id"].astype(str)
+    matched = pd.DataFrame()
+    if prop:
+        by_prop = tidy(run(http, BY_PROP.format(agg=AGG, prop=prop, fields=FIELDS)))
+        if ext_col == "id":
+            by_prop["ext"] = pd.to_numeric(by_prop["ext"], errors="coerce")
+            by_prop = by_prop.dropna(subset=["ext"]).astype({"ext": int})
+        by_prop = by_prop.sort_values("score", ascending=False).drop_duplicates("ext")
+        matched = sp.merge(by_prop, left_on=ext_col, right_on="ext", how="inner")
+        matched["match"] = prop
 
-
-def main() -> None:
-    http = Http(min_interval=CONFIG["rate"]["wikidata"])
-    sp = pd.read_parquet(DATA / "species" / "mammals.parquet", columns=["id", "sciName"])
-
-    by_id = tidy(run(http, BY_ID))
-    by_id["id"] = pd.to_numeric(by_id["mdd"], errors="coerce")
-    by_id = by_id.dropna(subset=["id"]).astype({"id": int})
-    # One MDD id can sit on two items (e.g. a species and a redirect). Prefer the item with more links.
-    by_id["score"] = by_id[["inat_id", "gbif_key_old", "iucn_id", "image", "enwiki"]].notna().sum(axis=1)
-    by_id = by_id.sort_values("score", ascending=False).drop_duplicates("id")
-    matched = sp.merge(by_id, on="id", how="inner")
-    matched["match"] = "mdd_id"
-
-    missing = sp[~sp["id"].isin(matched["id"])]
-    by_name_rows = []
+    missing = sp[~sp["key"].isin(matched["key"])] if len(matched) else sp
+    rows = []
     for batch in chunks(missing["sciName"].tolist(), 150):
-        values = " ".join(f'"{n}"' for n in batch)
-        by_name_rows += run(http, BY_NAME.format(agg=AGG, values=values, fields=FIELDS))
-    if by_name_rows:
-        by_name = tidy(by_name_rows).rename(columns={"name": "sciName"})
-        by_name["score"] = by_name[["inat_id", "gbif_key_old", "iucn_id", "image", "enwiki"]].notna().sum(axis=1)
+        rows += run(http, BY_NAME.format(agg=AGG, values=" ".join(f'"{n}"' for n in batch), fields=FIELDS))
+    if rows:
+        by_name = tidy(rows).rename(columns={"name": "sciName"})
         by_name = by_name.sort_values("score", ascending=False).drop_duplicates("sciName")
         named = missing.merge(by_name, on="sciName", how="inner")
         named["match"] = "name"
         matched = pd.concat([matched, named], ignore_index=True)
 
-    cols = ["id", "qid", "inat_id", "gbif_key_old", "gbif_key", "iucn_id", "commons_image", "enwiki", "match"]
-    out = matched[cols].copy()
+    cols = ["key", "qid", "inat_id", "gbif_key_old", "gbif_key", "iucn_id", "iucn_status",
+            "commons_image", "enwiki", "match"]
+    if "id" in sp:
+        cols.insert(0, "id")
+    out = matched[cols].drop_duplicates("key").copy()
     for c in ("inat_id", "gbif_key_old"):
         out[c] = pd.to_numeric(out[c], errors="coerce").astype("Int64")
     (DATA / "crosswalk").mkdir(parents=True, exist_ok=True)
-    out.to_parquet(DATA / "crosswalk" / "mammals_wikidata.parquet", index=False)
+    out.to_parquet(DATA / "crosswalk" / f"{cls}_wikidata.parquet", index=False)
+    print(f"Wikidata {cls}: {len(out)}/{len(sp)} matched "
+          f"({(out['match'] != 'name').sum()} by id); iNat {out['inat_id'].notna().sum()}, "
+          f"GBIF {out['gbif_key_old'].notna().sum()}, status {out['iucn_status'].notna().sum()}, "
+          f"image {out['commons_image'].notna().sum()}, enwiki {out['enwiki'].notna().sum()}")
 
-    n = len(sp)
-    print(f"Wikidata: {len(out)}/{n} matched ({(out['match'] == 'mdd_id').sum()} by MDD id); "
-          f"iNat {out['inat_id'].notna().sum()}, GBIF {out['gbif_key_old'].notna().sum()}, "
-          f"IUCN {out['iucn_id'].notna().sum()}, image {out['commons_image'].notna().sum()}, "
-          f"enwiki {out['enwiki'].notna().sum()}")
+
+def main() -> None:
+    http = Http(min_interval=CONFIG["rate"]["wikidata"])
+    for cls in (sys.argv[1:] or list(CLASSES)):
+        crosswalk(cls, http)
 
 
 if __name__ == "__main__":

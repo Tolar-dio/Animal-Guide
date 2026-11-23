@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Animal Guide{% endblock %}</title>
-<meta name="description" content="{% block description %}An open guide to every animal species on Earth, starting with all {{ release.species | n }} mammals.{% endblock %}">
+<meta name="description" content="{% block description %}An open guide to every animal species on Earth: {{ total_species | n }} mammals, birds and reptiles so far, with range maps, photos and conservation status.{% endblock %}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><polygon points='32,4 56,18 56,46 32,60 8,46 8,18' fill='%23e3a857'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
     <a href="{{ base }}/about/">About</a>
   </nav>
   <div class="search">
-    <input id="q" type="search" placeholder="Search {{ release.species | n }} mammals" autocomplete="off" aria-label="Search species">
+    <input id="q" type="search" placeholder="Search {{ total_species | n }} species" autocomplete="off" aria-label="Search species">
     <div id="results" class="results" hidden></div>
   </div>
   <button class="surprise" id="surprise" title="Take me to a random species">Surprise me</button>
@@ -34,8 +34,8 @@
 {% block main %}{% endblock %}
 </main>
 <footer class="foot">
-  <p>Species list: <a href="https://www.mammaldiversity.org/">Mammal Diversity Database</a> {{ release.version }} (CC BY 4.0). Photos and text keep their own licenses, credited on every page. Built {{ today }}.</p>
-  <p><a href="https://github.com/Tolar-dio/animal-guide">Source on GitHub</a> · <a href="{{ base }}/about/">Data and licenses</a></p>
+  <p>Species lists: <a href="https://www.mammaldiversity.org/">Mammal Diversity Database</a> {{ releases.mammals.version }}{% if releases.birds %}, <a href="https://www.birds.cornell.edu/clementschecklist/">eBird/Clements</a> {{ releases.birds.version }}{% endif %}{% if releases.reptiles %}, <a href="http://www.reptile-database.org/">The Reptile Database</a> {{ releases.reptiles.version }}{% endif %} (all CC BY 4.0). Photos and text keep their own licenses, credited on every page. Built {{ today }}.</p>
+  <p><a href="https://github.com/Tolar-dio/Animal-Guide">Source on GitHub</a> · <a href="{{ base }}/about/">Data and licenses</a></p>
 </footer>
 <script src="{{ base }}/static/app.js"></script>
 {% block scripts %}{% endblock %}
