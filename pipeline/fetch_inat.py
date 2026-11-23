@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import gzip
 import io
+import json
+from datetime import date
 
 import pandas as pd
 
@@ -43,6 +45,17 @@ def fill_ids(http: Http, sp: pd.DataFrame) -> pd.DataFrame:
     return sp
 
 
+def cached(http: Http, key: str, url: str, params: dict | None = None) -> dict:
+    """API call cached under cache/inat/api/<date>/ so an interrupted run resumes."""
+    path = CACHE / "inat" / "api" / date.today().isoformat() / f"{key}.json"
+    if path.exists():
+        return json.loads(path.read_text())
+    data = http.json(url, params=params)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+    return data
+
+
 def photo_row(mdd_id: int, p: dict, source: str, rank: int) -> dict | None:
     lic = (p.get("license_code") or "").lower()
     if lic not in OPEN | NC:
@@ -70,7 +83,7 @@ def main() -> None:
     photos, taxa = [], []
     ids = list(by_inat)
     for i, batch in enumerate(chunks(ids, 30)):
-        res = http.json(f"{API}/taxa/{','.join(map(str, batch))}")["results"]
+        res = cached(http, f"taxa-{batch[0]}-{len(batch)}", f"{API}/taxa/{','.join(map(str, batch))}")["results"]
         for t in res:
             mdd_id = by_inat.get(t["id"])
             if mdd_id is None:
@@ -78,7 +91,10 @@ def main() -> None:
             taxa.append({"id": mdd_id, "inat_id": t["id"], "inat_name": t["name"],
                          "observations_count": t.get("observations_count", 0),
                          "inat_common_name": t.get("preferred_common_name"),
-                         "inat_active": t.get("is_active", True)})
+                         "inat_active": t.get("is_active", True),
+                         # Short Wikipedia summary iNat mirrors (CC BY-SA); fallback text only.
+                         "wikipedia_summary": t.get("wikipedia_summary"),
+                         "wikipedia_url": t.get("wikipedia_url")})
             for rank, tp in enumerate(t.get("taxon_photos") or []):
                 row = photo_row(mdd_id, tp["photo"], "inat_taxon", rank)
                 if row:
@@ -87,10 +103,18 @@ def main() -> None:
             print(f"  taxa batch {i + 1}/{(len(ids) + 29) // 30}", flush=True)
 
     have_open = {p["id"] for p in photos if p["open"]}
+    # Reuse last run's observation photos; only search species that still have nothing open.
+    prev_path = DATA / "media" / "inat_photos.parquet"
+    if prev_path.exists():
+        prev = pd.read_parquet(prev_path)
+        prev = prev[(prev["source"] == "inat_observation") & (~prev["id"].isin(have_open))]
+        photos += prev.to_dict("records")
+        have_open |= set(prev.loc[prev["open"], "id"])
+        print(f"reused {len(prev)} observation photos from the last run")
     gaps = [(inat, mdd) for inat, mdd in by_inat.items() if mdd not in have_open]
-    print(f"observation search for {len(gaps)} species without an open curated photo")
+    print(f"observation search for {len(gaps)} species without an open photo")
     for j, (inat, mdd_id) in enumerate(gaps):
-        obs = http.json(f"{API}/observations", params={
+        obs = cached(http, f"obs-{inat}", f"{API}/observations", params={
             "taxon_id": inat, "photo_license": "cc0,cc-by,cc-by-sa", "quality_grade": "research",
             "order_by": "votes", "per_page": 3, "photos": "true"})["results"]
         rank = 100

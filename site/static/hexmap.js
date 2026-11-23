@@ -16,10 +16,19 @@ window.HexMap = {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     map.on("style.load", () => {
       map.setProjection({ type: "globe" });
+      // Ocean a deep teal, land a warm charcoal, so coastlines read under the data.
+      for (const layer of map.getStyle().layers) {
+        if (layer.id === "background") map.setPaintProperty(layer.id, "background-color", "#1c211d");
+        if (layer.type === "fill" && /^water/.test(layer.id)) map.setPaintProperty(layer.id, "fill-color", "#0c2027");
+        if (layer.type === "fill" && /landcover|landuse|park/.test(layer.id)) map.setLayoutProperty(layer.id, "visibility", "none");
+      }
       // Quieter basemap: drop most labels so the data reads first.
       for (const layer of map.getStyle().layers) {
-        if (layer.type === "symbol" && !/country|continent|ocean|place_city/.test(layer.id)) {
+        if (layer.type !== "symbol") continue;
+        if (opts.labels === false || !/country|continent|ocean/.test(layer.id)) {
           map.setLayoutProperty(layer.id, "visibility", "none");
+        } else {
+          map.setLayoutProperty(layer.id, "text-field", ["coalesce", ["get", "name:en"], ["get", "name_en"], ["get", "name"]]);
         }
       }
     });

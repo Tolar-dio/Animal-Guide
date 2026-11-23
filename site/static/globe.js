@@ -3,7 +3,9 @@
   const el = document.getElementById("globe");
   if (!el || !window.maplibregl) return;
   const base = AG.base;
-  const map = HexMap.create(el, { center: [20, 15], zoom: window.innerWidth < 700 ? 0.9 : 1.7 });
+  const wide = window.innerWidth >= 900;
+  const map = HexMap.create(el, { center: [20, 15], zoom: wide ? 1.9 : 1.0, labels: false });
+  if (wide) map.setPadding({ left: Math.min(520, window.innerWidth * 0.36), top: 0, right: 0, bottom: 0 });
   let spinning = true;
   const stop = () => { spinning = false; };
   ["mousedown", "touchstart", "wheel"].forEach(ev => el.addEventListener(ev, stop, { passive: true }));

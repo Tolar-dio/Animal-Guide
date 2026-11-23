@@ -78,7 +78,7 @@
     <section class="card wiki">
       <h2>From Wikipedia</h2>
       {% for para in sp.wiki.lead.split("\n") if para.strip() %}<p>{{ para }}</p>{% endfor %}
-      <p class="src">Text from the Wikipedia article <a href="{{ sp.wiki.url }}">“{{ sp.wiki.title }}”</a>{% if sp.wiki.revid %} (<a href="https://en.wikipedia.org/w/index.php?oldid={{ sp.wiki.revid }}">this revision</a>, <a href="https://en.wikipedia.org/w/index.php?title={{ sp.wiki.title | replace(' ', '_') }}&action=history">authors</a>){% endif %}, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Shown unchanged.</p>
+      <p class="src">Text from the Wikipedia article <a href="{{ sp.wiki.url }}">“{{ sp.wiki.title }}”</a>{% if sp.wiki.revid %} (<a href="https://en.wikipedia.org/w/index.php?oldid={{ sp.wiki.revid }}">this revision</a>, <a href="https://en.wikipedia.org/w/index.php?title={{ sp.wiki.title | replace(' ', '_') }}&action=history">authors</a>){% else %} (<a href="https://en.wikipedia.org/w/index.php?title={{ sp.wiki.title | replace(' ', '_') }}&action=history">authors</a>){% endif %}, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>{% if sp.wiki.via %}, as summarized by iNaturalist{% else %}. Shown unchanged{% endif %}.</p>
     </section>
     {% endif %}
 
@@ -142,7 +142,26 @@
         {% if sp.continents %}<dt>Continents</dt><dd>{{ sp.continents | join(", ") }}</dd>{% endif %}
         {% if sp.range_km2 %}<dt>Range</dt><dd>~{{ (sp.range_km2 / 1000) | round | int | n }}k km²</dd>{% endif %}
         {% if sp.observations_count is not none %}<dt>Sightings</dt><dd>{{ sp.observations_count | n }} on iNaturalist</dd>{% endif %}
+        {% set t = sp.traits or {} %}
+        {% if t.mass_g %}<dt>Weight</dt><dd>up to {{ t.mass_g | mass }}{% if t.mass_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
+        {% if t.length_mm %}<dt>Length</dt><dd>up to {{ t.length_mm | mm }}{% if t.length_measure == "HBL" %} <span class="muted">head and body</span>{% endif %}{% if t.length_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
+        {% if t.longevity_yr %}<dt>Lifespan</dt><dd>up to {{ t.longevity_yr | round | int }} years</dd>{% endif %}
+        {% if t.litter_size %}<dt>Litter</dt><dd>about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} young</dd>{% endif %}
+        {% if t.nocturnality is not none %}<dt>Active</dt><dd>{{ activity(t) }}{% if t.act_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
       </dl>
+      {% if t %}
+      <details class="srcs"><summary>Where these numbers come from</summary>
+        <p>Traits from <a href="https://doi.org/10.5281/zenodo.17200405">TetrapodTraits v2.0.0</a> (Moura et al. 2024, CC BY 4.0). Weight and lifespan are the maximum reported values. Estimates were inferred from close relatives.</p>
+        <ul>
+          {% if t.mass_source %}<li>Weight: {{ t.mass_source }}</li>{% endif %}
+          {% if t.length_source %}<li>Length: {{ t.length_source }}</li>{% endif %}
+          {% if t.longevity_source %}<li>Lifespan: {{ t.longevity_source }}</li>{% endif %}
+          {% if t.litter_source %}<li>Litter: {{ t.litter_source }}</li>{% endif %}
+          {% if t.diet_source %}<li>Diet: {{ t.diet_source }}</li>{% endif %}
+        </ul>
+        <p><a href="https://github.com/Tolar-dio/animal-guide/issues/new?title={{ ('Data error: ' ~ sp.sciName) | urlencode }}">Spot an error? Report it</a></p>
+      </details>
+      {% endif %}
       <h3>Elsewhere</h3>
       <ul class="links">
         <li><a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database</a></li>

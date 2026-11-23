@@ -83,8 +83,77 @@ def join_words(items: list[str]) -> str:
     return ", ".join(items[:-1]) + " and " + items[-1]
 
 
+def oxford(items: list[str]) -> str:
+    if len(items) == 2 and any(" and " in i for i in items):
+        return items[0] + ", and " + items[1]
+    if len(items) <= 2:
+        return " and ".join(items)
+    return ", ".join(items[:-1]) + ", and " + items[-1]
+
+
 def a_or_an(word: str) -> str:
     return "an" if word[:1].lower() in "aeiou" else "a"
+
+
+def fmt_mass(g: float) -> str:
+    if g < 10:
+        return f"{g:.1f} g".replace(".0 g", " g")
+    if g < 1000:
+        return f"{round(g):,} g"
+    if g < 100_000:
+        kg = g / 1000
+        return f"{kg:.1f} kg".replace(".0 kg", " kg") if kg < 10 else f"{round(kg):,} kg"
+    if g < 1_000_000:
+        return f"{int(g / 1000 + 0.5):,} kg"
+    return f"{g / 1_000_000:,.0f} tonnes"
+
+
+def fmt_length(mm: float) -> str:
+    if mm < 1000:
+        return f"{round(mm / 10, 1):g} cm"
+    return f"{mm / 1000:.1f} m".replace(".0 m", " m")
+
+
+def measured(t: dict, flag: str) -> bool:
+    return t.get(flag) in (0, 0.0, False)
+
+
+DIET = [("diet_fruit", "fruit"), ("diet_nectar", "nectar"), ("diet_seeds", "seeds"),
+        ("diet_plants", "leaves and other plants"), ("diet_invertebrates", "insects and other invertebrates"),
+        ("diet_fish", "fish"), ("diet_cold_blooded", "reptiles and amphibians"),
+        ("diet_warm_blooded", "birds and mammals"), ("diet_carrion", "carrion")]
+WAYS = [("arboreal", "in trees"), ("terrestrial", "on the ground"), ("fossorial", "in burrows"),
+        ("aquatic", "in water"), ("aerial", "on the wing")]
+
+
+def activity(t: dict) -> str | None:
+    n = t.get("nocturnality")
+    if n is None:
+        return None
+    return "mostly at night" if n >= 0.75 else "mostly by day" if n <= 0.25 else "by day and by night"
+
+
+def trait_phrases(t: dict) -> str | None:
+    """One sentence of life history, using measured values only."""
+    if not t:
+        return None
+    out = []
+    if t.get("mass_g") and measured(t, "mass_imputed"):
+        out.append(f"The largest adults weigh up to {fmt_mass(t['mass_g'])}.")
+    ways = [w for k, w in WAYS if t.get(k) == 1] if measured(t, "habitat_imputed") else []
+    act = activity(t) if measured(t, "act_imputed") else None
+    if ways and act:
+        out.append(f"It lives {join_words(ways)} and is active {act}.")
+    elif ways:
+        out.append(f"It lives {join_words(ways)}.")
+    elif act:
+        out.append(f"It is active {act}.")
+    diet = [w for k, w in DIET if t.get(k) == 1]
+    if diet and t.get("diet_source"):
+        out.append(f"Its diet includes {oxford(diet)}.")
+    if t.get("longevity_yr") and t.get("longevity_source"):
+        out.append(f"The longest recorded lifespan is about {round(t['longevity_yr'])} years.")
+    return " ".join(out) or None
 
 
 def glance(sp: dict, ctx: dict) -> list[str]:
@@ -111,6 +180,11 @@ def glance(sp: dict, ctx: dict) -> list[str]:
         if orig and orig.replace("_", " ") != sp["sciName"]:
             s += f", originally under the name <em>{escape(orig)}</em>"
         out.append(s + ".")
+
+    t = sp.get("traits") or {}
+    life = trait_phrases(t)
+    if life:
+        out.append(life)
 
     countries = sp["countries"]
     if sp.get("extinct"):
@@ -239,6 +313,9 @@ def build() -> None:
     env.filters["italic"] = md_italic
     env.filters["n"] = fmt_int
     env.filters["slug"] = slugify
+    env.filters["mass"] = fmt_mass
+    env.filters["mm"] = fmt_length
+    env.globals["activity"] = activity
     env.globals.update(base=base, release=release, today=today, order_names=ORDER_NAMES,
                        allow_nc=allow_nc, site_url=CONFIG["site_url"])
 

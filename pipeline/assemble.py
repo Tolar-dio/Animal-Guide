@@ -6,8 +6,11 @@ and returns plain dicts for build_site.py.
 """
 from __future__ import annotations
 
+import html
 import json
 import math
+import re
+from urllib.parse import unquote
 from collections import defaultdict
 from pathlib import Path
 
@@ -103,6 +106,11 @@ def load() -> dict:
     leads = _read(DATA / "text" / "wikipedia_leads.parquet")
     ranges = _read(DATA / "ranges" / "mdd_ranges_h3.parquet")
     v12 = _read(DATA / "crosswalk" / "mdd_v1_2_ids.parquet")
+    traits = _read(DATA / "traits" / "mammals.parquet")
+    traits_by_id = {}
+    if traits is not None:
+        for r in traits.to_dict("records"):
+            traits_by_id[r["id"]] = {k: _clean(v) for k, v in r.items()}
 
     sp = sp.merge(xw, on="id", how="left") if xw is not None else sp
     if taxa is not None:
@@ -166,6 +174,12 @@ def load() -> dict:
             "title": lead.title, "lead": lead.lead, "revid": _clean(lead.revid),
             "url": f"https://en.wikipedia.org/wiki/{lead.title.replace(' ', '_')}",
         }
+        summary, wurl = d.get("wikipedia_summary"), d.get("wikipedia_url")
+        if d["wiki"] is None and summary and wurl:
+            text = re.sub(r"<[^>]+>", "", html.unescape(summary)).strip()
+            title = unquote(wurl.rsplit("/", 1)[-1]).replace("_", " ")
+            d["wiki"] = {"title": title, "lead": text, "revid": None, "url": wurl, "via": "iNaturalist"}
+        d["traits"] = traits_by_id.get(row.id)
         rng = range_by_id.get(row.id)
         d["range"] = rng
         d["countries"] = [c.strip() for c in (d.get("countryDistribution") or "").split("|") if c.strip()]
