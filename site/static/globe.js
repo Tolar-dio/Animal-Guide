@@ -25,7 +25,7 @@
         attribution: 'Ranges: <a href="https://doi.org/10.5281/zenodo.6644198">Marsh et al. 2022</a>' });
       map.addLayer({ id: "rich", type: "fill", source: "rich", paint: {
         "fill-color": ["interpolate", ["linear"], ["sqrt", ["get", "n"]],
-          1, "#1f4a52", Math.sqrt(max) * 0.3, "#2f7d6b", Math.sqrt(max) * 0.5, "#78b35a",
+          1, "#0d2427", Math.sqrt(max) * 0.35, "#1d5156", Math.sqrt(max) * 0.55, "#4f9a68",
           Math.sqrt(max) * 0.75, "#e3c24f", Math.sqrt(max), "#f39a3d"],
         "fill-opacity": 0.82, "fill-outline-color": "#00000000" } });
       map.addLayer({ id: "rich-hover", type: "line", source: "rich", paint: { "line-color": "#fff", "line-width": 2 },

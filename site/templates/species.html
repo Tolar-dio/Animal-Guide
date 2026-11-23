@@ -140,7 +140,7 @@
         {% if sp.authorityYear %}<dt>Described</dt><dd>{{ sp.authorityYear }}</dd>{% endif %}
         {% if sp.realms %}<dt>Realm</dt><dd>{{ sp.realms | join(", ") }}</dd>{% endif %}
         {% if sp.continents %}<dt>Continents</dt><dd>{{ sp.continents | join(", ") }}</dd>{% endif %}
-        {% if sp.range_km2 %}<dt>Range</dt><dd>~{{ (sp.range_km2 / 1000) | round | int | n }}k km²</dd>{% endif %}
+        {% if sp.range_km2 %}<dt>Range</dt><dd>about {{ sp.range_km2 | area }}</dd>{% endif %}
         {% if sp.observations_count is not none %}<dt>Sightings</dt><dd>{{ sp.observations_count | n }} on iNaturalist</dd>{% endif %}
         {% set t = sp.traits or {} %}
         {% if t.mass_g %}<dt>Weight</dt><dd>up to {{ t.mass_g | mass }}{% if t.mass_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}

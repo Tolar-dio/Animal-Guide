@@ -159,7 +159,7 @@ summary { cursor: pointer; color: var(--ink); font-weight: 500; }
 .stats strong { display: block; font: 600 1.5rem var(--serif); color: var(--ink); }
 .stats span { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .legend { display: flex; align-items: center; gap: 8px; font-size: .75rem; color: var(--muted); }
-.legend i { width: 150px; height: 9px; border-radius: 5px; background: linear-gradient(90deg, #1f4a52, #2f7d6b, #78b35a, #e3c24f, #f39a3d); }
+.legend i { width: 150px; height: 9px; border-radius: 5px; background: linear-gradient(90deg, #0d2427, #1d5156, #4f9a68, #e3c24f, #f39a3d); }
 .panel { position: absolute; right: 16px; top: 16px; bottom: 16px; width: min(380px, calc(100% - 32px)); background: rgba(17,26,20,.95); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; overflow-y: auto; backdrop-filter: blur(8px); }
 .panel .close { position: absolute; right: 10px; top: 8px; background: none; border: 0; color: var(--ink-2); font-size: 1.6rem; cursor: pointer; }
 .panel h2 { font-size: 1.3rem; padding-right: 28px; }

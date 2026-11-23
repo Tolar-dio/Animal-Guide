@@ -108,6 +108,14 @@ def fmt_mass(g: float) -> str:
     return f"{g / 1_000_000:,.0f} tonnes"
 
 
+def fmt_area(km2: float) -> str:
+    if km2 >= 1_000_000:
+        return f"{km2 / 1e6:.1f} million km²"
+    if km2 >= 10_000:
+        return f"{round(km2, -3):,.0f} km²"
+    return f"{round(km2, -2):,.0f} km²"
+
+
 def fmt_length(mm: float) -> str:
     if mm < 1000:
         return f"{round(mm / 10, 1):g} cm"
@@ -198,7 +206,7 @@ def glance(sp: dict, ctx: dict) -> list[str]:
 
     if sp.get("range_km2"):
         km2 = sp["range_km2"]
-        out.append(f"Its mapped range covers roughly {fmt_int(round(km2, -3) if km2 > 5000 else round(km2, -2))} km², "
+        out.append(f"Its mapped range covers roughly {fmt_area(km2)}, "
                    f"about the size of {area_phrase(km2)}.")
 
     st = sp["iucnStatus"]
@@ -314,6 +322,7 @@ def build() -> None:
     env.filters["n"] = fmt_int
     env.filters["slug"] = slugify
     env.filters["mass"] = fmt_mass
+    env.filters["area"] = fmt_area
     env.filters["mm"] = fmt_length
     env.globals["activity"] = activity
     env.globals.update(base=base, release=release, today=today, order_names=ORDER_NAMES,
