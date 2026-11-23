@@ -146,7 +146,7 @@
         {% if t.mass_g %}<dt>Weight</dt><dd>up to {{ t.mass_g | mass }}{% if t.mass_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.length_mm %}<dt>Length</dt><dd>up to {{ t.length_mm | mm }}{% if t.length_measure == "HBL" %} <span class="muted">head and body</span>{% endif %}{% if t.length_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
         {% if t.longevity_yr %}<dt>Lifespan</dt><dd>up to {{ t.longevity_yr | round | int }} years</dd>{% endif %}
-        {% if t.litter_size %}<dt>Litter</dt><dd>about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} young</dd>{% endif %}
+        {% if t.litter_size %}<dt>Litter</dt><dd>{% if t.litter_size < 1.15 %}usually a single young{% else %}about {{ "%.1f" | format(t.litter_size) if t.litter_size < 10 else t.litter_size | round | int }} young{% endif %}</dd>{% endif %}
         {% if t.nocturnality is not none %}<dt>Active</dt><dd>{{ activity(t) }}{% if t.act_imputed %} <span class="muted">(estimate)</span>{% endif %}</dd>{% endif %}
       </dl>
       {% if t %}

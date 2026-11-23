@@ -211,8 +211,9 @@ def glance(sp: dict, ctx: dict) -> list[str]:
 
     st = sp["iucnStatus"]
     if st in ("CR", "EN", "VU"):
-        out.append(f"The IUCN Red List classes it as {sp['status_name']}, meaning it faces a "
-                   f"{'extremely high' if st == 'CR' else 'very high' if st == 'EN' else 'high'} risk of extinction in the wild.")
+        level = "an extremely high" if st == "CR" else "a very high" if st == "EN" else "a high"
+        out.append(f"The IUCN Red List classes it as {sp['status_name']}, meaning it faces "
+                   f"{level} risk of extinction in the wild.")
     elif st == "DD":
         out.append("Scientists don't yet know enough about it to judge how threatened it is (Data Deficient).")
     elif st == "NE":
