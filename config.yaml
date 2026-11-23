@@ -6,8 +6,8 @@
 allow_nc: true
 
 # Public URL of the site. Used for canonical links and the sitemap.
-site_url: https://tolar-dio.github.io/animal-guide
-base_path: /animal-guide
+site_url: https://tolar-dio.github.io/Animal-Guide
+base_path: /Animal-Guide
 
 # Licenses accepted without allow_nc (iNaturalist codes and Commons short names).
 open_licenses: [cc0, cc-by, cc-by-sa, pd, public domain, cc-by-4.0, cc-by-sa-4.0, cc-by-3.0, cc-by-sa-3.0, cc-by-2.0, cc-by-sa-2.0, cc-by-2.5, cc-by-sa-2.5]
