@@ -1,0 +1,31 @@
+name: Rebuild range hexagons
+
+# Manual only. The MDD range maps (Zenodo 6644198) are a fixed 2022 dataset,
+# so this runs once, or when a new range source is added. About 10 GB of
+# downloads, processed one order at a time.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ranges:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python pipeline/build_ranges_h3.py --cache "$RUNNER_TEMP/ranges"
+      - name: Commit
+        run: |
+          git config user.name "animal-guide-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ranges
+          git diff --cached --quiet || (git commit -m "Rebuild range hexagons" && git push)

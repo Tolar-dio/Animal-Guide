@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Coverage · Animal Guide{% endblock %}
+{% macro pct(a, b) %}{{ ((a / b * 100) if b else 0) | round | int }}%{% endmacro %}
+{% block main %}
+<section class="page-head">
+  <h1>What we have, and what's missing</h1>
+  <p class="lede">An honest count of how much open evidence exists for each mammal. Every gap below is a species that nobody has yet photographed, mapped or written about under an open license.</p>
+</section>
+<section class="cov-summary">
+  <div><strong>{{ pct(totals.open_photo, totals.count) }}</strong><span>have an openly licensed photo ({{ totals.open_photo | n }})</span></div>
+  <div><strong>{{ pct(totals.nc_photo, totals.count) }}</strong><span>have only a non-commercial photo ({{ totals.nc_photo | n }})</span></div>
+  <div><strong>{{ pct(totals.no_photo, totals.count) }}</strong><span>have no usable photo at all ({{ totals.no_photo | n }})</span></div>
+  <div><strong>{{ pct(totals.range, totals.count) }}</strong><span>have an expert range map ({{ totals.range | n }})</span></div>
+  <div><strong>{{ pct(totals.wiki, totals.count) }}</strong><span>have a Wikipedia article ({{ totals.wiki | n }})</span></div>
+</section>
+<div class="table-wrap">
+<table class="cov">
+  <thead><tr><th>Group</th><th>Species</th><th>Open photo</th><th>NC only</th><th>No photo</th><th>Range map</th><th>Wikipedia</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td><a href="{{ base }}/explore/{{ r.slug }}/">{{ r.label }}</a> <span class="muted">{{ r.order }}</span></td>
+    <td>{{ r.count | n }}</td>
+    <td><span class="bar"><i style="width:{{ pct(r.open_photo, r.count) }}"></i></span>{{ pct(r.open_photo, r.count) }}</td>
+    <td>{{ r.nc_photo | n }}</td>
+    <td>{{ r.no_photo | n }}</td>
+    <td><span class="bar"><i style="width:{{ pct(r.range, r.count) }}"></i></span>{{ pct(r.range, r.count) }}</td>
+    <td><span class="bar"><i style="width:{{ pct(r.wiki, r.count) }}"></i></span>{{ pct(r.wiki, r.count) }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<section class="wanted" id="most-wanted">
+  <h2>Most wanted: {{ wanted_n | n }} living mammals with no open photo</h2>
+  <p>If you have a photo of any of these, or can take one, post it to <a href="https://www.inaturalist.org/">iNaturalist</a> with a CC BY or CC0 license. The next nightly build will pick it up.</p>
+  {% for order, members in wanted.items() %}
+  <details{% if loop.first %} open{% endif %}><summary>{{ order_names.get(order, order) }} <small>{{ members|length }}</small></summary>
+    <ul class="wanted-list">{% for s in members %}<li><a href="{{ base }}/species/{{ s.slug }}/"><em>{{ s.sciName }}</em></a> {{ s.common }} <span class="muted">{{ s.family }}{% if s.countries %} · {{ s.countries[:3] | join(", ") }}{% if s.countries|length > 3 %}…{% endif %}{% endif %}</span></li>{% endfor %}</ul>
+  </details>
+  {% endfor %}
+</section>
+{% endblock %}

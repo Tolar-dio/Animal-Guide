@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ card.label }} ({{ card.order }}) · Animal Guide{% endblock %}
+{% block main %}
+<section class="page-head">
+  <nav class="crumbs"><a href="{{ base }}/explore/">Mammals</a> <span>›</span> {{ card.order }}</nav>
+  <h1>{{ card.label }}</h1>
+  <p class="lede"><em>{{ card.order }}</em> · {{ card.count | n }} species in {{ card.families }} {{ "family" if card.families == 1 else "families" }}{% if card.threatened %}, {{ card.threatened }} of them threatened{% endif %}.</p>
+  {% if families|length > 1 %}
+  <nav class="jump">{% for fam, members in families.items() %}<a href="#{{ fam | slug }}">{{ fam }} <small>{{ members|length }}</small></a>{% endfor %}</nav>
+  {% endif %}
+</section>
+{% for fam, members in families.items() %}
+<section class="family" id="{{ fam | slug }}">
+  <h2>{{ fam }} <small>{{ members|length }} species</small></h2>
+  <ul class="grid">
+    {% for s in members %}
+    <li><a href="{{ base }}/species/{{ s.slug }}/" class="sp-card">
+      {% if s.media %}<img src="{{ s.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph" title="No open photo yet"></span>{% endif %}
+      <span class="sp-text"><strong>{{ s.common }}</strong><em>{{ s.sciName }}</em></span>
+      <span class="dot s-{{ s.iucnStatus }}" title="{{ s.status_name }}"></span>
+    </a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% endblock %}

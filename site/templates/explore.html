@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Explore mammals by group · Animal Guide{% endblock %}
+{% block main %}
+<section class="page-head">
+  <h1>Explore mammals</h1>
+  <p class="lede">{{ release.species | n }} species in {{ orders | length }} orders, from Mammal Diversity Database {{ release.version }}. Ordered from the oldest branches of the mammal tree to the youngest.</p>
+</section>
+<div class="orders wide">
+  {% for o in orders %}
+  <a class="order-card" href="{{ base }}/explore/{{ o.slug }}/">
+    {% if o.pic %}<img src="{{ o.pic.media[0].thumb }}" alt="" loading="lazy">{% endif %}
+    <span><strong>{{ o.label }}</strong><em>{{ o.order }}</em><small>{{ o.count | n }} species · {{ o.families }} {{ "family" if o.families == 1 else "families" }}{% if o.threatened %} · {{ o.threatened }} threatened{% endif %}</small></span>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

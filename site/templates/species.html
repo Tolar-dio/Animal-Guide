@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% set hero = sp.media[0] if sp.media else None %}
+{% block title %}{{ sp.common }} ({{ sp.sciName }}) · Animal Guide{% endblock %}
+{% block description %}{{ sp.common }}, {{ sp.sciName }}: range map, photos, conservation status and taxonomy. {{ order_label }}, family {{ sp.family }}.{% endblock %}
+{% block head %}
+<link rel="canonical" href="{{ site_url }}/species/{{ sp.slug }}/">
+<meta property="og:title" content="{{ sp.common }} ({{ sp.sciName }})">
+{% if hero %}<meta property="og:image" content="{{ hero.src }}">{% endif %}
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
+{% endblock %}
+{% block bodyclass %}species-page status-{{ sp.iucnStatus }}{% endblock %}
+{% block main %}
+<section class="hero {% if not hero %}hero-empty{% endif %}">
+  {% if hero %}
+  <img class="hero-img" src="{{ hero.src }}" alt="{{ sp.common }}" fetchpriority="high">
+  {% endif %}
+  <div class="hero-shade"></div>
+  <div class="hero-text">
+    <nav class="crumbs">
+      <a href="{{ base }}/explore/">Mammals</a> <span>›</span>
+      <a href="{{ base }}/explore/{{ sp.order | slug }}/">{{ order_label }}</a> <span>›</span>
+      <a href="{{ base }}/explore/{{ sp.order | slug }}/#{{ sp.family | slug }}">{{ sp.family }}</a>
+    </nav>
+    <h1>{{ sp.common }}</h1>
+    <p class="sci"><em>{{ sp.sciName }}</em> <span class="auth">{{ sp.authority or "" }}</span></p>
+    <p class="badges">
+      <span class="status s-{{ sp.iucnStatus }}" title="IUCN Red List category">{{ sp.status_name }}</span>
+      {% if sp.domestic %}<span class="tag">Domestic</span>{% endif %}
+      {% if sp.countries|length == 1 and not sp.extinct %}<span class="tag">Found only in {{ sp.countries[0] }}</span>{% endif %}
+      {% if sp.other_common %}<span class="aka">Also called {{ sp.other_common[:3] | join(", ") }}</span>{% endif %}
+    </p>
+  </div>
+  {% if hero %}
+  <p class="credit"><a href="{{ hero.page }}" rel="noopener">{{ hero.credit | truncate(90) }}</a> · {% if hero.license_url %}<a href="{{ hero.license_url }}" rel="license noopener">{{ hero.license_name }}</a>{% else %}{{ hero.license_name }}{% endif %} · {{ hero.via }}</p>
+  {% else %}
+  <div class="nophoto">
+    <p><strong>No openly licensed photo of this species exists yet.</strong></p>
+    {% if sp.inat_id %}<p>Have one? <a href="https://www.inaturalist.org/taxa/{{ sp.inat_id }}">Share it on iNaturalist</a> under CC BY and it can appear here.</p>{% endif %}
+    {% set rel_pic = (relatives | selectattr("media") | first) %}
+    {% if rel_pic %}<p class="relpic"><img src="{{ rel_pic.media[0].small }}" alt="" loading="lazy"> Closest pictured relative: <a href="{{ base }}/species/{{ rel_pic.slug }}/">{{ rel_pic.common }}</a></p>{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<div class="layout">
+  <article class="main-col">
+    <section class="card glance">
+      <h2>At a glance</h2>
+      <p>{% for line in sp.glance %}{{ line }} {% endfor %}</p>
+    </section>
+
+    <section class="card map-card">
+      <div class="map-head">
+        <h2>Where it lives</h2>
+        <div class="layers" role="group" aria-label="Map layers">
+          <label class="{% if not sp.range %}off{% endif %}"><input type="checkbox" id="lyr-range" {% if sp.range %}checked{% else %}disabled{% endif %}> Expert range</label>
+          <label class="{% if not sp.gbif_key_old %}off{% endif %}"><input type="checkbox" id="lyr-gbif" {% if sp.gbif_key_old and not sp.range %}checked{% endif %} {% if not sp.gbif_key_old %}disabled{% endif %}> Observations</label>
+        </div>
+      </div>
+      <div id="map" class="map" data-id="{{ sp.id }}" data-continent="{{ sp.continents[0] if sp.continents else '' }}" data-range="{{ 1 if sp.range else 0 }}" data-gbif="{{ sp.gbif_key_old or '' }}"
+           {% if sp.typeLocalityLatitude is not none and sp.typeLocalityLongitude is not none %}data-type-lat="{{ sp.typeLocalityLatitude }}" data-type-lng="{{ sp.typeLocalityLongitude }}"{% endif %}></div>
+      <p class="map-note">
+        {% if sp.range %}<span class="key k-range"></span> Expert range from <a href="https://doi.org/10.5281/zenodo.6644198">Marsh et al. 2022</a> (CC BY 4.0), drawn as hexagons.{% else %}No expert range map is available for this species in open data yet.{% endif %}
+        {% if sp.gbif_key_old %}<span class="key k-gbif"></span> Observation density from <a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a>.{% endif %}
+        {% if sp.typeLocalityLatitude is not none %}<span class="key k-type"></span> Type locality, where the specimen that defines the species was collected.{% endif %}
+      </p>
+      {% if sp.distributionNotes %}
+      <div class="notes">
+        <h3>Distribution</h3>
+        <p>{{ sp.distributionNotes | italic }}</p>
+        {% if sp.countries %}<p class="countries"><strong>{{ sp.countries|length }} {{ "country" if sp.countries|length == 1 else "countries" }}:</strong> {{ sp.countries | join(", ") }}</p>{% endif %}
+        <p class="src">Source: Mammal Diversity Database {{ release.version }}{% if sp.dist_cites %}, citing {{ sp.dist_cites | length }} reference{{ "s" if sp.dist_cites|length != 1 }}{% endif %}.</p>
+      </div>
+      {% endif %}
+    </section>
+
+    {% if sp.wiki %}
+    <section class="card wiki">
+      <h2>From Wikipedia</h2>
+      {% for para in sp.wiki.lead.split("\n") if para.strip() %}<p>{{ para }}</p>{% endfor %}
+      <p class="src">Text from the Wikipedia article <a href="{{ sp.wiki.url }}">“{{ sp.wiki.title }}”</a>{% if sp.wiki.revid %} (<a href="https://en.wikipedia.org/w/index.php?oldid={{ sp.wiki.revid }}">this revision</a>, <a href="https://en.wikipedia.org/w/index.php?title={{ sp.wiki.title | replace(' ', '_') }}&action=history">authors</a>){% endif %}, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Shown unchanged.</p>
+    </section>
+    {% endif %}
+
+    {% if sp.media|length > 1 %}
+    <section class="card gallery-card">
+      <h2>Gallery</h2>
+      <div class="gallery">
+        {% for m in sp.media[1:] %}
+        <figure>
+          <a href="{{ m.src }}" class="lightbox" data-credit="{{ m.credit }} · {{ m.license_name }} · {{ m.via }}"><img src="{{ m.thumb }}" alt="{{ sp.common }}, photo {{ loop.index + 1 }}" loading="lazy"></a>
+          <figcaption><a href="{{ m.page }}">{{ m.credit | truncate(48) }}</a> · {{ m.license_name }}</figcaption>
+        </figure>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="card taxo">
+      <h2>Name and classification</h2>
+      <dl class="cls">
+        <dt>Order</dt><dd><a href="{{ base }}/explore/{{ sp.order | slug }}/">{{ sp.order }}</a> <span class="muted">{{ order_label }}</span></dd>
+        {% if sp.suborder %}<dt>Suborder</dt><dd>{{ sp.suborder }}</dd>{% endif %}
+        <dt>Family</dt><dd>{{ sp.family }}</dd>
+        {% if sp.subfamily %}<dt>Subfamily</dt><dd>{{ sp.subfamily }}</dd>{% endif %}
+        {% if sp.tribe %}<dt>Tribe</dt><dd>{{ sp.tribe }}</dd>{% endif %}
+        <dt>Genus</dt><dd><em>{{ sp.genus }}</em></dd>
+        <dt>Species</dt><dd><em>{{ sp.sciName }}</em> {{ sp.authority or "" }}</dd>
+      </dl>
+      {% if sp.authoritySpeciesCitation %}
+      <h3>Original description</h3>
+      <p class="cite">{{ sp.authoritySpeciesCitation | italic }}{% if sp.authoritySpeciesLink %} <a href="{{ sp.authoritySpeciesLink }}">Read it</a>{% endif %}</p>
+      {% endif %}
+      {% if sp.typeLocality %}
+      <h3>Type specimen</h3>
+      <p>{% if sp.typeKind %}{{ sp.typeKind | capitalize }}{% else %}Type{% endif %}{% if sp.typeVoucher %}{% if ":" in sp.typeVoucher and " " not in sp.typeVoucher %} <code>{{ sp.typeVoucher }}</code>{% else %} ({{ sp.typeVoucher }}){% endif %}{% endif %}, collected at: {{ sp.typeLocality | italic }}</p>
+      {% endif %}
+      {% if sp.taxonomyNotes %}
+      <h3>Taxonomy notes</h3>
+      <p>{{ sp.taxonomyNotes | italic }}</p>
+      {% endif %}
+      {% if sp.subspecies %}
+      <details><summary>Subspecies</summary><p>{{ sp.subspecies | italic }}</p></details>
+      {% endif %}
+      {% if sp.nominal|length > 1 %}
+      <details><summary>{{ sp.nominal|length }} names that refer to this species</summary><p class="nominal">{{ sp.nominal | join(" · ") }}</p></details>
+      {% endif %}
+      {% if sp.tax_cites %}
+      <details><summary>References ({{ sp.tax_cites|length }})</summary><ol class="refs">{% for c in sp.tax_cites %}<li>{{ c | italic }}</li>{% endfor %}</ol></details>
+      {% endif %}
+      <p class="src">Source: <a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database {{ release.version }}</a>, CC BY 4.0.</p>
+    </section>
+  </article>
+
+  <aside class="side-col">
+    <section class="card facts">
+      <h2>Quick facts</h2>
+      <dl>
+        <dt>Status</dt><dd><span class="dot s-{{ sp.iucnStatus }}"></span>{{ sp.status_name }}{% if sp.status_as %}<br><span class="muted">assessed as <em>{{ sp.status_as }}</em></span>{% endif %}</dd>
+        {% if sp.authorityYear %}<dt>Described</dt><dd>{{ sp.authorityYear }}</dd>{% endif %}
+        {% if sp.realms %}<dt>Realm</dt><dd>{{ sp.realms | join(", ") }}</dd>{% endif %}
+        {% if sp.continents %}<dt>Continents</dt><dd>{{ sp.continents | join(", ") }}</dd>{% endif %}
+        {% if sp.range_km2 %}<dt>Range</dt><dd>~{{ (sp.range_km2 / 1000) | round | int | n }}k km²</dd>{% endif %}
+        {% if sp.observations_count is not none %}<dt>Sightings</dt><dd>{{ sp.observations_count | n }} on iNaturalist</dd>{% endif %}
+      </dl>
+      <h3>Elsewhere</h3>
+      <ul class="links">
+        <li><a href="https://www.mammaldiversity.org/taxon/{{ sp.id }}">Mammal Diversity Database</a></li>
+        {% if sp.inat_id %}<li><a href="https://www.inaturalist.org/taxa/{{ sp.inat_id }}">iNaturalist</a></li>{% endif %}
+        {% if sp.gbif_key_old %}<li><a href="https://www.gbif.org/species/{{ sp.gbif_key_old }}">GBIF</a></li>{% endif %}
+        {% if sp.iucnStatus != "NE" %}<li><a href="https://www.iucnredlist.org/search?query={{ sp.sciName | urlencode }}&searchType=species">IUCN Red List</a></li>{% endif %}
+        {% if sp.wiki %}<li><a href="{{ sp.wiki.url }}">Wikipedia</a></li>{% endif %}
+        {% if sp.qid %}<li><a href="https://www.wikidata.org/wiki/{{ sp.qid }}">Wikidata</a></li>{% endif %}
+      </ul>
+    </section>
+
+    {% if neighbors %}
+    <section class="card mini-list">
+      <h2>Shares its range with</h2>
+      <ul>{% for n in neighbors %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common }}</strong><em>{{ n.sciName }}</em></span></a></li>{% endfor %}</ul>
+    </section>
+    {% endif %}
+
+    {% if relatives %}
+    <section class="card mini-list">
+      <h2>Others in <em>{{ sp.genus }}</em></h2>
+      <ul>{% for n in relatives %}<li><a href="{{ base }}/species/{{ n.slug }}/">{% if n.media %}<img src="{{ n.media[0].small }}" alt="" loading="lazy">{% else %}<span class="ph"></span>{% endif %}<span><strong>{{ n.common }}</strong><em>{{ n.sciName }}</em></span><span class="dot s-{{ n.iucnStatus }}" title="{{ n.status_name }}"></span></a></li>{% endfor %}</ul>
+      {% if relatives_total > relatives|length %}<p class="more"><a href="{{ base }}/explore/{{ sp.order | slug }}/#{{ sp.family | slug }}">All {{ relatives_total + 1 }} species</a></p>{% endif %}
+    </section>
+    {% endif %}
+  </aside>
+</div>
+
+<div id="lb" class="lb" hidden><img alt=""><p></p></div>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/h3-js@4.5.0/dist/h3-js.umd.js"></script>
+<script src="{{ base }}/static/hexmap.js"></script>
+<script src="{{ base }}/static/species.js"></script>
+{% endblock %}

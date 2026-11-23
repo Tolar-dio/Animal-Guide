@@ -1,0 +1,51 @@
+name: Refresh data
+
+# Weekly: species list, crosswalk, photos, Wikipedia text. Then rebuild the site.
+# New CC BY photos posted to iNaturalist show up within a week.
+on:
+  schedule:
+    - cron: "17 9 * * 0"   # Sundays 09:17 UTC (02:17 in Denver)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Mammal Diversity Database
+        run: python pipeline/fetch_mdd.py
+      - name: Wikidata crosswalk
+        run: python pipeline/fetch_wikidata.py
+      - name: iNaturalist ids and photos
+        run: python pipeline/fetch_inat.py
+      - name: Wikimedia Commons and Wikipedia
+        run: python pipeline/fetch_wikimedia.py
+        continue-on-error: true   # keep last week's text if Wikimedia throttles us
+      - name: Commit changed data
+        run: |
+          git config user.name "animal-guide-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "No data changes"; else
+            git commit -m "Data refresh $(date -u +%F)"
+            git push
+          fi
+
+  deploy:
+    needs: refresh
+    uses: ./.github/workflows/deploy.yml

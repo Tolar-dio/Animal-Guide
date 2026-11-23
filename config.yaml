@@ -1,0 +1,26 @@
+# Build settings for animal-guide.
+
+# NonCommercial media and data (CC BY-NC photos, AquaMaps, xeno-canto) are
+# allowed only while the site carries no ads, sponsorships or revenue.
+# Flip to false and rebuild to strip every NC item in one pass.
+allow_nc: true
+
+# Public URL of the site. Used for canonical links and the sitemap.
+site_url: https://tolar-dio.github.io/animal-guide
+base_path: /animal-guide
+
+# Licenses accepted without allow_nc (iNaturalist codes and Commons short names).
+open_licenses: [cc0, cc-by, cc-by-sa, pd, public domain, cc-by-4.0, cc-by-sa-4.0, cc-by-3.0, cc-by-sa-3.0, cc-by-2.0, cc-by-sa-2.0, cc-by-2.5, cc-by-sa-2.5]
+nc_licenses: [cc-by-nc, cc-by-nc-sa, cc-by-nc-nd, cc-by-nd]
+
+# Wikimedia only serves thumbnails at these widths.
+commons_widths: [330, 960, 1920]
+
+# Polite request rates (seconds between calls).
+rate:
+  inaturalist: 1.1
+  wikidata: 1.0
+  wikipedia: 3.0
+  commons: 3.0
+
+user_agent: "animal-guide/0.1 (https://github.com/Tolar-dio/animal-guide; open wildlife encyclopedia)"

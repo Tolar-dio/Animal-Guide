@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}About and data sources · Animal Guide{% endblock %}
+{% block main %}
+<section class="page-head prose">
+  <h1>About Animal Guide</h1>
+  <p class="lede">An open guide to every animal species, built in the spirit of ARKive. It starts with every mammal and will grow to every vertebrate, then every invertebrate.</p>
+  <p>ARKive held more than 100,000 photos and videos of 16,000 species when it closed in 2019. Its media was donated under terms that could not move to anyone else, so when the money ran out the whole collection went into storage. Animal Guide is built the opposite way: every page is generated from openly licensed data, the site costs nearly nothing to run, and anyone can copy and rebuild it from the <a href="https://github.com/Tolar-dio/animal-guide">source code</a>.</p>
+  <h2>How it works</h2>
+  <p>A Python pipeline pulls the species list from the Mammal Diversity Database, links each species to Wikidata, iNaturalist and GBIF, chooses the best openly licensed photos, converts expert range maps into hexagons, and renders a static page for every species. Nothing on the site is written by hand except the templates.</p>
+  <h2>Licenses</h2>
+  <p>Code is MIT. Derived data is CC BY 4.0. Photos and Wikipedia text keep their own licenses and are credited on every page they appear. {% if allow_nc %}Some photos are licensed for non-commercial use only; the site carries no ads or revenue so that they can be shown, and they can be removed in one rebuild if that ever changes.{% endif %} IUCN Red List categories appear as labels only.</p>
+  <h2>Data sources</h2>
+  {% for group, items in sources.items() %}
+  <h3>{{ group | replace("_", " ") | capitalize }}</h3>
+  <ul class="sources">
+    {% for s in items %}
+    <li><strong>{% if s.url %}<a href="{{ s.url }}">{{ s.name }}</a>{% else %}{{ s.name }}{% endif %}</strong>{% if s.version %} {{ s.version }}{% endif %} · {{ s.license }} · <span class="state st-{{ s.status }}">{{ s.status | replace("_", " ") }}</span>{% if s.covers %}<br><span class="muted">{{ s.covers }}</span>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  <h2>Roadmap</h2>
+  <ol>
+    <li>Mammals: all {{ release.species | n }} species (now).</li>
+    <li>Birds (AviList, 11,172 species) and reptiles (12,687).</li>
+    <li>Amphibians and fishes, completing about 77,700 vertebrates.</li>
+    <li>Insects and every other animal, as an index with featured groups.</li>
+  </ol>
+</section>
+{% endblock %}

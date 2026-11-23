@@ -1,0 +1,139 @@
+# Every dataset animal-guide uses, with version and license.
+# nc: true means NonCommercial terms. Those inputs are only used when
+# config.yaml sets allow_nc: true, and never enter the CC BY data release.
+# status: in_use | planned | needs_permission | link_only
+
+species_lists:
+  - id: mdd
+    name: Mammal Diversity Database
+    version: v2.5 (2026-07-28)
+    doi: 10.5281/zenodo.21654811
+    url: https://www.mammaldiversity.org/
+    license: CC BY 4.0
+    nc: false
+    status: in_use
+    covers: 6,904 mammal species (6,774 wild extant, 113 recently extinct, 17 domestic)
+  - id: avilist
+    name: AviList global bird checklist
+    version: v2026 (2026-10-20)
+    url: https://www.avilist.org/checklist/v2026
+    license: CC BY 4.0
+    nc: false
+    status: planned
+    covers: 11,172 bird species
+  - id: col_xr
+    name: Catalogue of Life eXtended Release
+    version: 2026-10
+    url: https://www.catalogueoflife.org/
+    license: CC BY 4.0
+    nc: false
+    status: planned
+    covers: reptiles (Reptile Database sector), fishes, amphibians, all invertebrates
+  - id: eschmeyer
+    name: Eschmeyer's Catalog of Fishes
+    url: https://www.calacademy.org/scientists/projects/catalog-of-fishes
+    license: no bulk license found
+    status: link_only
+  - id: amphibiaweb
+    name: AmphibiaWeb
+    url: https://amphibiaweb.org/data/datause.html
+    license: CC BY-NC (bulk data needs permission)
+    nc: true
+    status: needs_permission
+
+ranges:
+  - id: mdd_ranges
+    name: Expert range maps harmonised to MDD (Marsh et al. 2022)
+    version: 1.0, MDD v1.2 taxonomy
+    doi: 10.5281/zenodo.6644198
+    license: CC BY 4.0
+    nc: false
+    status: in_use
+    covers: 6,362 mammal species
+    note: Converted to H3 res-3 (and res-4 for small ranges) by pipeline/build_ranges_h3.py
+  - id: gbif_maps
+    name: GBIF Maps API v2 occurrence density tiles
+    url: https://techdocs.gbif.org/en/openapi/v2/maps
+    license: tiles embeddable; underlying records CC0 / CC BY / CC BY-NC per dataset
+    nc: false
+    status: in_use
+    note: Live tiles, nothing rehosted
+  - id: inat_ranges
+    name: iNaturalist Open Range Map Dataset
+    url: https://www.inaturalist.org/pages/range_maps
+    license: CC BY 4.0
+    nc: false
+    status: planned
+  - id: gard
+    name: Global Assessment of Reptile Distributions 1.7
+    url: https://datadryad.org/
+    license: CC0
+    nc: false
+    status: planned
+  - id: iucn_spatial
+    name: IUCN Red List spatial data
+    url: https://www.iucnredlist.org/terms/terms-of-use
+    license: Terms of Use v3.1, no redistribution including derivatives
+    status: needs_permission
+  - id: birdlife
+    name: BirdLife Data Zone range maps
+    url: https://datazone.birdlife.org/terms-and-conditions
+    license: request only, no web publication without written permission
+    status: needs_permission
+  - id: aquamaps
+    name: AquaMaps
+    url: https://www.aquamaps.org/main/TermsConditions.php
+    license: CC BY-NC 3.0
+    nc: true
+    status: planned
+
+media:
+  - id: inat_photos
+    name: iNaturalist taxon photos
+    url: https://www.inaturalist.org/pages/help#licenses
+    license: per photo (CC0, CC BY, CC BY-SA used by default; CC BY-NC variants only with allow_nc)
+    status: in_use
+  - id: commons
+    name: Wikimedia Commons
+    url: https://commons.wikimedia.org/
+    license: per file (CC BY, CC BY-SA, public domain)
+    nc: false
+    status: in_use
+  - id: xeno_canto
+    name: xeno-canto sound recordings
+    url: https://xeno-canto.org/about/terms
+    license: per recording, mostly CC BY-NC-SA / BY-NC-ND
+    nc: true
+    status: planned
+  - id: bhl
+    name: Biodiversity Heritage Library plates (pre-1931, US public domain)
+    url: https://www.biodiversitylibrary.org/
+    license: public domain
+    nc: false
+    status: planned
+
+text_and_facts:
+  - id: wikidata
+    name: Wikidata
+    url: https://www.wikidata.org/
+    license: CC0
+    nc: false
+    status: in_use
+    note: ID crosswalk (iNat, GBIF, IUCN, Wikipedia), images, common names
+  - id: wikipedia
+    name: English Wikipedia lead sections
+    url: https://en.wikipedia.org/
+    license: CC BY-SA 4.0
+    nc: false
+    status: in_use
+    note: Shown verbatim in a separate, attributed block; never remixed into our own prose
+  - id: iucn_category
+    name: IUCN Red List category label (via MDD iucnStatus field)
+    license: category labels are explicitly unrestricted
+    nc: false
+    status: in_use
+  - id: combine
+    name: COMBINE mammal traits (Soria et al. 2021)
+    license: CC BY 4.0
+    nc: false
+    status: planned
