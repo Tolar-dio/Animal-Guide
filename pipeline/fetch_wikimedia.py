@@ -37,6 +37,8 @@ def norm_license(short: str | None, url: str | None) -> str | None:
         return None
     if s in ("public domain", "pd", "cc0", "cc0 1.0", "no restrictions") or s.startswith("pd-") or s.startswith("pd "):
         return "pd" if "cc0" not in s else "cc0"
+    if s == "attribution":  # Commons {{Attribution}}: free use with credit
+        return "attribution"
     s = s.replace(" ", "-")
     if s.startswith("cc-by"):
         return s
@@ -61,7 +63,7 @@ def commons(http: Http, files: list[str]) -> list[dict]:
     for i, batch in enumerate(chunks(files, 50)):
         r = cached_query(http, COMMONS, "commons", i, {
             "action": "query", "format": "json", "formatversion": 2, "prop": "imageinfo",
-            "iiprop": "url|size|extmetadata", "iiurlwidth": 960,
+            "iiprop": "url|size|mime|extmetadata", "iiurlwidth": 960,
             "titles": "|".join("File:" + f for f in batch)})
         for page in r["query"]["pages"]:
             ii = (page.get("imageinfo") or [None])[0]
@@ -75,7 +77,7 @@ def commons(http: Http, files: list[str]) -> list[dict]:
                 "license": lic, "license_url": get("LicenseUrl"),
                 "artist": clean(get("Artist")), "credit": clean(get("Credit")),
                 "description": clean(get("ImageDescription")),
-                "thumb_960": ii.get("thumburl"), "page": ii.get("descriptionurl"),
+                "thumb_960": (ii.get("thumburl") or "").split("?")[0] or None, "page": ii.get("descriptionurl"),
                 "width": ii.get("width"), "height": ii.get("height"),
                 "mime": ii.get("mime"),
             })
@@ -115,7 +117,7 @@ def main() -> None:
     http_c = Http(min_interval=CONFIG["rate"]["commons"])
     files = sorted(xw["commons_image"].dropna().unique())
     imgs = pd.DataFrame(commons(http_c, files))
-    imgs = imgs[imgs["mime"].isin(["image/jpeg", "image/png", "image/webp"])]
+    imgs = imgs[imgs["file"].str.lower().str.endswith((".jpg", ".jpeg", ".png", ".webp"))]
     (DATA / "media").mkdir(parents=True, exist_ok=True)
     imgs.to_parquet(DATA / "media" / "commons_images.parquet", index=False)
     print(f"Commons: {len(files)} files, {imgs['license'].notna().sum()} with an open license")

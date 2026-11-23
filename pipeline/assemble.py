@@ -26,6 +26,7 @@ STATUS = {
 LICENSE_NAMES = {
     "cc0": ("CC0", "https://creativecommons.org/publicdomain/zero/1.0/"),
     "pd": ("Public domain", None),
+    "attribution": ("Attribution", None),
     "cc-by": ("CC BY", "https://creativecommons.org/licenses/by/4.0/"),
     "cc-by-sa": ("CC BY-SA", "https://creativecommons.org/licenses/by-sa/4.0/"),
     "cc-by-nc": ("CC BY-NC", "https://creativecommons.org/licenses/by-nc/4.0/"),
@@ -65,7 +66,7 @@ def license_label(code: str | None) -> tuple[str, str | None]:
 def is_open(code: str | None) -> bool:
     if not code:
         return False
-    return code in ("cc0", "pd") or (code.startswith("cc-by") and "-nc" not in code and "-nd" not in code)
+    return code in ("cc0", "pd", "attribution") or (code.startswith("cc-by") and "-nc" not in code and "-nd" not in code)
 
 
 def inat_media(row) -> dict:
@@ -81,7 +82,7 @@ def inat_media(row) -> dict:
 
 
 def commons_media(row) -> dict | None:
-    if not row.license or not row.thumb_960:
+    if not _clean(row.license) or not _clean(row.thumb_960):
         return None
     name, url = license_label(row.license)
     t960 = row.thumb_960
@@ -89,8 +90,8 @@ def commons_media(row) -> dict | None:
     return {
         "kind": "commons", "src": t960, "thumb": thumb, "small": thumb,
         "width": _clean(row.width), "height": _clean(row.height),
-        "credit": row.artist or row.credit or "Wikimedia Commons contributor",
-        "license": row.license, "license_name": name, "license_url": row.license_url or url,
+        "credit": re.sub(r"\s*\((talk|discuss)[^)]*\)", "", _clean(row.artist) or _clean(row.credit) or "Wikimedia Commons contributor").strip(),
+        "license": row.license, "license_name": name, "license_url": _clean(row.license_url) or url,
         "open": is_open(row.license), "page": row.page, "via": "Wikimedia Commons",
     }
 
